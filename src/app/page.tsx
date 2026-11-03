@@ -1,3 +1,4 @@
+import Link from "next/link";
 import LoginButton from "@/components/LoginButton";
 
 export default function Home() {
@@ -13,6 +14,14 @@ export default function Home() {
         환불 규정을 결제 경로에 맞춰 안내해요.
       </p>
       <LoginButton />
+      <nav className="flex gap-4 text-sm text-zinc-500">
+        <Link href="/guides" className="hover:underline">
+          해지 가이드 둘러보기
+        </Link>
+        <Link href="/privacy" className="hover:underline">
+          개인정보처리방침
+        </Link>
+      </nav>
     </main>
   );
 }
