@@ -189,7 +189,7 @@ first-service/
 
 ### 5c. 배포 체크리스트 (8·9단계)
 
-배포 준비 점검(2026-11-03): 비밀값 패턴 검색 결과 깨끗함, `.gitignore`가 `.env*`·`node_modules`·`.next`·`.vercel`을 제외하고 `.env.example`만 허용함, 빌드·린트 통과. **git 저장소 생성·첫 커밋 완료(2026-11-03, 브랜치 `main`, 커밋 `feat: 구독 해지 도우미 MVP`, 로컬 전용 작성자 설정 `ivyshana`).** 스테이징 53개 파일에서 `.env.local`·`node_modules`·`.next`·비밀값 패턴 없음을 확인함. **아직 GitHub에 푸시하지 않음(원격 저장소 없음).** 이후 변경은 커밋하고 푸시해야 Vercel에 반영됨.
+배포 준비 점검(2026-11-03): 비밀값 패턴 검색 결과 깨끗함, `.gitignore`가 `.env*`·`node_modules`·`.next`·`.vercel`을 제외하고 `.env.example`만 허용함, 빌드·린트 통과. **git 저장소 생성·첫 커밋 완료(2026-11-03, 브랜치 `main`, 커밋 `feat: 구독 해지 도우미 MVP`, 로컬 전용 작성자 설정 `ivyshana`).** 스테이징 53개 파일에서 `.env.local`·`node_modules`·`.next`·비밀값 패턴 없음을 확인함. **GitHub 저장소 `https://github.com/skygaul/Unsub` 생성·푸시 완료(2026-11-03, 현재 Private).** `gh`(skygaul 계정)로 생성. Public 생성은 권한 설정으로 막혀서 Private으로 만들었음. **제출 전에 Public으로 전환해야 평가자가 코드를 볼 수 있음**(GitHub > Settings > Danger Zone > Change visibility, 또는 `gh repo edit skygaul/Unsub --visibility public --accept-visibility-change-consequences`). 이후 변경은 커밋하고 푸시해야 Vercel에 반영됨.
 
 1. **GitHub**: 새 저장소 생성 → `git init` → 첫 커밋(`.env.local`이 포함되지 않는지 `git status`로 확인) → 푸시. PRD.md, HANDOFF.md 포함해서 올림
 2. **Vercel**: GitHub로 로그인 → Add New Project → 저장소 Import. Framework는 Next.js 자동 감지
