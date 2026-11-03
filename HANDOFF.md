@@ -158,7 +158,7 @@ first-service/
 | 2 | 화면·데이터 구조 설계 | 완료 | PRD 4~5장, schema.sql |
 | 3 | 프로젝트 셋업, DB 스키마 | 완료 | Next 16 스캐폴드, Supabase 클라이언트, schema/seed 작성. `npm run build` 통과(더미 환경변수로 확인) |
 | 3a | Supabase 프로젝트 | **사용자가 완료** | 프로젝트 `Unsub` 생성, schema.sql·seed.sql 실행, `services` 11행 확인, 세 테이블 존재 확인 |
-| 4 | Google 로그인 | **완료 (2026-11-03)** | Google Cloud 프로젝트 `unsub-513607`에서 OAuth 클라이언트 생성, Supabase Google Provider 활성화, Redirect URL 등록. 사용자가 브라우저에서 로그인 성공 확인(`/dashboard`에 이메일 표시) |
+| 4 | Google 로그인 | **완료 (2026-11-03)** | 이 서비스 전용 Google Cloud 프로젝트에서 OAuth 클라이언트 생성, Supabase Google Provider 활성화, Redirect URL 등록. 사용자가 브라우저에서 로그인 성공 확인(`/dashboard`에 이메일 표시) |
 | 5 | API(CRUD)와 DB 연동 | **코드 완료, 로그인 상태 실사용 검증 대기** | 구독 CRUD와 서비스 조회 API 구현. 비로그인 시 401, 가이드 조회·404는 curl로 확인. **로그인 상태에서 추가·수정·삭제는 아직 브라우저로 확인 전** |
 | 6 | 프론트 화면 구현 | **대부분 완료, 실사용 검증 대기** | `/dashboard`, `/subscriptions/new`, `/subscriptions/[id]`, `/guides`, `/guides/[serviceId]` 구현. 빌드·린트 통과. 문자 붙여넣기 입력은 7단계 |
 | 7 | Claude API 문자 파싱 | **완료 (2026-11-03)** | 규칙 파서 + `claude-haiku-5-5`. 시험 스크립트 5건 성공. 앱 화면에서의 실사용 확인과 Vercel 환경변수 추가는 남음 (맨 위 "보류 중인 작업" 참고) |
@@ -189,7 +189,7 @@ first-service/
 
 ### 5c. 배포 체크리스트 (8·9단계)
 
-배포 준비 점검(2026-11-03): 비밀값 패턴 검색 결과 깨끗함, `.gitignore`가 `.env*`·`node_modules`·`.next`·`.vercel`을 제외하고 `.env.example`만 허용함, 빌드·린트 통과. **git 저장소는 아직 없음(`git init` 전).**
+배포 준비 점검(2026-11-03): 비밀값 패턴 검색 결과 깨끗함, `.gitignore`가 `.env*`·`node_modules`·`.next`·`.vercel`을 제외하고 `.env.example`만 허용함, 빌드·린트 통과. **git 저장소 생성·첫 커밋 완료(2026-11-03, 브랜치 `main`, 커밋 `feat: 구독 해지 도우미 MVP`, 로컬 전용 작성자 설정 `ivyshana`).** 스테이징 53개 파일에서 `.env.local`·`node_modules`·`.next`·비밀값 패턴 없음을 확인함. **아직 GitHub에 푸시하지 않음(원격 저장소 없음).** 이후 변경은 커밋하고 푸시해야 Vercel에 반영됨.
 
 1. **GitHub**: 새 저장소 생성 → `git init` → 첫 커밋(`.env.local`이 포함되지 않는지 `git status`로 확인) → 푸시. PRD.md, HANDOFF.md 포함해서 올림
 2. **Vercel**: GitHub로 로그인 → Add New Project → 저장소 Import. Framework는 Next.js 자동 감지
