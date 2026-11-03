@@ -162,7 +162,7 @@ first-service/
 | 5 | API(CRUD)와 DB 연동 | **코드 완료, 로그인 상태 실사용 검증 대기** | 구독 CRUD와 서비스 조회 API 구현. 비로그인 시 401, 가이드 조회·404는 curl로 확인. **로그인 상태에서 추가·수정·삭제는 아직 브라우저로 확인 전** |
 | 6 | 프론트 화면 구현 | **대부분 완료, 실사용 검증 대기** | `/dashboard`, `/subscriptions/new`, `/subscriptions/[id]`, `/guides`, `/guides/[serviceId]` 구현. 빌드·린트 통과. 문자 붙여넣기 입력은 7단계 |
 | 7 | Claude API 문자 파싱 | **완료 (2026-11-03)** | 규칙 파서 + `claude-haiku-5-5`. 시험 스크립트 5건 성공. 앱 화면에서의 실사용 확인과 Vercel 환경변수 추가는 남음 (맨 위 "보류 중인 작업" 참고) |
-| 8 | 배포·접속 확인 | 대기 | Vercel. 배포 후 Supabase Redirect URL에 배포 주소 추가 필요 |
+| 8 | 배포·접속 확인 | **배포 완료, 로그인 확인 대기** | `https://unsub-unsub1.vercel.app` 공개 접속·DB 연결 확인. Supabase URL 등록, Google 프로덕션 게시, 배포본 로그인 시험이 남음 (5c 참고) |
 | 9 | GitHub 업로드, 제출 | 대기 | `git init` 전. `.env.local`이 커밋되지 않는지 확인할 것 |
 
 ### 사용자가 지금 해야 할 일 (이 일이 끝나야 4단계 확인 가능)
@@ -188,6 +188,10 @@ first-service/
 - Claude API 규칙은 `claude-api` 스킬 기준(모델 `claude-opus-5-5`, SDK 1.4.0, zod 4)
 
 ### 5c. 배포 체크리스트 (8·9단계)
+
+> **배포 현황 (2026-11-03)**: Vercel Hobby, 프로젝트 `unsub`, **운영 주소 `https://unsub-unsub1.vercel.app`** (GitHub `main` 푸시 시 자동 재배포). ⚠️ `unsub.vercel.app`은 **다른 사람의 사이트**이므로 제출·설정에 쓰지 말 것.
+> 완료: 배포 성공, **Deployment Protection(Vercel Authentication)을 Disabled로 변경**(기본값이 켜져 있어 로그인 없이는 접근 불가였음), 로그인 없이 접속 가능, `/api/services` 11개 응답(Supabase 환경변수·DB 연결 정상), 비로그인 `/dashboard`·`/subscriptions/new`는 홈으로 307, 비로그인 `/api/subscriptions`·`/api/parse`는 401.
+> **남은 일**: ① Supabase > Authentication > URL Configuration에서 Site URL을 `https://unsub-unsub1.vercel.app`으로 변경하고 Redirect URLs에 `https://unsub-unsub1.vercel.app/auth/callback` 추가 ② Google Auth Platform > Audience에서 "프로덕션으로 게시" ③ 배포 주소에서 실제 Google 로그인·구독 CRUD·문자 자동 입력(AI 경로 포함) 확인 ④ GitHub 저장소 Public 전환 ⑤ 구글폼 제출. (Vercel에 `ANTHROPIC_API_KEY`를 넣었는지는 로그인 후 AI 분석으로만 확인 가능)
 
 배포 준비 점검(2026-11-03): 비밀값 패턴 검색 결과 깨끗함, `.gitignore`가 `.env*`·`node_modules`·`.next`·`.vercel`을 제외하고 `.env.example`만 허용함, 빌드·린트 통과. **git 저장소 생성·첫 커밋 완료(2026-11-03, 브랜치 `main`, 커밋 `feat: 구독 해지 도우미 MVP`, 로컬 전용 작성자 설정 `ivyshana`).** 스테이징 53개 파일에서 `.env.local`·`node_modules`·`.next`·비밀값 패턴 없음을 확인함. **GitHub 저장소 `https://github.com/skygaul/Unsub` 생성·푸시 완료(2026-11-03, 현재 Private).** `gh`(skygaul 계정)로 생성. Public 생성은 권한 설정으로 막혀서 Private으로 만들었음. **제출 전에 Public으로 전환해야 평가자가 코드를 볼 수 있음**(GitHub > Settings > Danger Zone > Change visibility, 또는 `gh repo edit skygaul/Unsub --visibility public --accept-visibility-change-consequences`). 이후 변경은 커밋하고 푸시해야 Vercel에 반영됨.
 
