@@ -155,7 +155,7 @@ first-service/
 | v0.7 | 로그인 쿠키가 없는 방문자는 프록시가 Supabase를 부르지 않음(`lib/supabase/auth-cookie.ts`), 로딩 화면(`loading.tsx` 5개, `components/Skeleton.tsx`), 오류·404 화면(`error.tsx`, `global-error.tsx`, `not-found.tsx`) | `0458949` 푸시·배포됨. 아래 "v0.7" 참고 |
 | v0.8 | 보안 헤더·기본 CSP(`next.config.ts`), API 호출 제한 확대(`lib/rate-limit.ts`), Dependabot(`.github/dependabot.yml`) | `772932b` 푸시·배포됨. 아래 "v0.8" 참고 |
 | v0.9 | `npm test`로 시험 통합, GitHub Actions CI(린트·시험·빌드), Dependabot에 Actions 추가 | 푸시됨. 위 "v0.9" 참고 |
-| v0.10 | 해지 가이드(공개 데이터) 5분 캐시: `lib/supabase/public.ts`, 7곳 전환 | 미푸시. 아래 "v0.10" 참고 |
+| v0.10 | 해지 가이드(공개 데이터) 5분 캐시: `lib/supabase/public.ts`, 7곳 전환 | `4350e2f` 푸시·배포됨. 아래 "v0.10" 참고 |
 
 ### v0.6 자동 로그아웃 (푸시·배포됨, 운영 동작 확인 전)
 - **동작**: 로그인한 채 **10분** 활동이 없으면 로그아웃, **만료 1분 전에 "곧 로그아웃돼요, 계속 사용하시겠어요?" 안내**(계속 사용 / 지금 로그아웃). 로그아웃되면 홈에 "자동으로 로그아웃됐어요" 안내
@@ -184,14 +184,14 @@ first-service/
 - **Dependabot** (`.github/dependabot.yml`): npm 의존성을 매주 월요일(KST) PR로 제안, 마이너·패치는 한 PR로 묶고 메이저는 개별 PR, 열린 PR 최대 5개. **GitHub 저장소 Settings > Code security에서 Dependabot alerts·security updates를 켜는 것은 사용자가 직접 해야 함**. PR은 main에 병합하기 전까지 운영에 반영되지 않음(병합하면 자동 배포되므로 `npm run build`와 시험 확인 후 병합)
 - **검증**: 운영 빌드를 띄워 응답 헤더 확인, 브라우저에서 같은 출처 요청 통과·외부 주소 요청은 CSP가 차단·Supabase 주소 요청 통과·화면 정상 동작·콘솔에는 일부러 낸 위반만 있음을 확인함. 호출 제한은 시험(`test-rate-limit.mjs`)으로만 확인했고 **실제 로그인 상태에서 429가 나는 것은 확인 전**. **2026-11-04 사용자가 로컬 운영 빌드(`npm run build && npm start`)에서 구글 로그인, 구독 추가·수정·삭제, 결제 문자 자동 입력, 결제 달력이 정상이고 콘솔에 CSP 위반이 없음을 확인함. GitHub의 Dependabot alerts·security updates도 사용자가 켬.** **배포된 운영 사이트(`unsub-unsub1.vercel.app`)에서도 사용자가 Google 로그인, 구독 추가, 결제 문자 자동 입력이 정상이고 콘솔에 CSP 위반이 없음을 확인함(2026-11-04).** 호출 제한의 429는 운영에서도 확인 기록 없음(시험 스크립트로만 확인)
 
-### v0.10 해지 가이드 캐시 (코드 완료, 미푸시)
+### v0.10 해지 가이드 캐시 (푸시·배포됨, 운영 공개 페이지 확인됨)
 - **구조**: `src/lib/supabase/public.ts`의 `createPublicClient()`는 쿠키를 읽지 않는 anon 클라이언트이고, 모든 Supabase 요청이 `cachedFetch`를 거쳐 `next: { revalidate }`(Next.js 요청 캐시, Vercel에서는 서버 전체가 공유)를 갖게 함. 쿠키가 없어 응답이 사용자마다 달라지지 않으므로 캐시가 안전함. **공개 데이터(`services`)에만 쓸 것. 구독 같은 사용자 데이터는 반드시 `lib/supabase/server.ts`의 `createClient()`로 읽을 것**(이 파일 주석에도 경고함)
 - **적용한 곳 7곳**: `/guides`, `/guides/[serviceId]`, `/subscriptions/new`·`[id]`의 서비스 목록, `/api/services`, `/api/services/[id]`, `/api/parse`의 서비스 목록 조회
 - **캐시 시간**: 기본 300초(5분). 환경변수 `SERVICES_REVALIDATE_SECONDS`로 변경(0이면 캐시 끔, 상한 24시간, 이상한 값은 기본값). **개발 중 DB를 고치고 바로 보려면 `.env.local`에 `SERVICES_REVALIDATE_SECONDS=0`**. 운영에서 값을 바꾸면 재배포해야 반영됨. `/guides`는 정적(ISR) 페이지라 값이 **빌드 때** 정해짐(`next build` 결과에 `5m`로 표시)
 - **가이드 데이터를 고친 뒤**: `seed.sql` 실행 → 최대 5분 뒤 화면 반영(즉시 반영 장치는 만들지 않음, 비밀 키가 필요해서). 빌드 때 `/guides`가 DB를 읽으므로 Vercel 빌드에는 진짜 Supabase 환경변수가 있어야 함(CI는 가짜 주소로 빌드해도 통과함. 가져오기에 실패하면 오류 안내가 담긴 페이지가 만들어질 뿐이고 배포되지 않음)
 - **검증(요청 횟수를 세는 가짜 Supabase)**: `/guides` 5번+`/guides/netflix` 5번(탭 바꿔 가며)+서비스 API 6번을 열어도 Supabase로 간 요청은 **2건**(이전에는 요청마다 1건). 캐시 시간 3초로 두면 시간이 지난 뒤 새로 가져오고(2건), 0이면 요청마다 가져옴(3건). 화면 내용과 API 응답도 정상. 시험 `test-public-client.mjs`(캐시 시간 해석, `cachedFetch`가 요청 설정을 보존하고 `next.revalidate`만 덧붙임)
 - **알려진 동작**: 로딩 화면(`loading.tsx`, v0.7)이 있으면 응답이 스트리밍되어 **없는 가이드 주소(`/guides/없는서비스`)도 HTTP 상태는 200**으로 나가고 화면에는 404 안내가 보임(`notFound()`가 상태 코드를 못 바꿈). 기능에는 문제없으나 검색 엔진에는 `noindex`로 표시됨
-- **미확인**: 운영 사이트에서의 체감 속도 변화, Vercel에서 요청 캐시 공유 동작(로컬 서버로만 측정)
+- **운영 확인(2026-11-04, 에이전트가 curl로 읽기 전용 확인)**: 배포 후 `/guides`·`/guides/netflix`·`/guides/naver_plus`·`/privacy`·`/`가 모두 200이고 응답 0.15~0.4초대(첫 요청은 0.65~0.77초). `/guides`는 11개 서비스 카드, `/guides/notion`은 "공식 문서 확인", `/guides/naver_plus`는 "연간 이용권" 항목, `/api/services`는 11개를 돌려줌. `/guides` 응답 헤더에 `X-Vercel-Cache: HIT`(정적 페이지가 Vercel에서 캐시로 제공됨). 보안 헤더(CSP, X-Frame-Options, nosniff)도 유지됨. **미확인**: 캐시 도입 전과의 정확한 속도 비교(이전 값을 측정해 두지 않음), 로그인한 상태의 구독 추가 화면 서비스 목록(사용자 확인 필요)
 
 ### v0.9 자동 점검 CI (푸시됨 2026-11-04, GitHub Actions 첫 실행 통과)
 - **`npm test`** = `scripts/run-tests.mjs`가 `scripts/test-*.mjs`를 모두 실행하고 시험별 결과·요약을 출력, 하나라도 실패하면 종료 코드 1(실패 출력만 자세히 보여 주고 실행 환경의 경고 문구는 걸러 냄). `npm test -- <이름 일부>`로 일부만 실행. 새 `test-*.mjs`를 만들면 자동으로 포함됨. 실제 Claude를 호출하는 `test-ai-parse.mjs`는 제외(`npm run test:ai`로 따로 실행)
