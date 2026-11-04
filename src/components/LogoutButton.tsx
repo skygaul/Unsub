@@ -12,6 +12,8 @@ export default function LogoutButton() {
     setLoading(true);
     const supabase = createClient();
     await supabase.auth.signOut();
+    // 자동 로그아웃 감시가 로그아웃한 사용자를 다시 로그인 상태로 보지 않게 마지막 활동 쿠키를 지운다.
+    document.cookie = "last_active=; Path=/; Max-Age=0; SameSite=Lax";
     router.replace("/");
     router.refresh();
   }

@@ -1,9 +1,20 @@
 import Link from "next/link";
 import LoginButton from "@/components/LoginButton";
 
-export default function Home() {
+export default async function Home({ searchParams }: PageProps<"/">) {
+  const params = await searchParams;
+  const loggedOutByIdle = params.reason === "idle";
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center gap-8 px-6 text-center">
+      {loggedOutByIdle && (
+        <p
+          role="status"
+          className="rounded-lg bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+        >
+          10분 동안 활동이 없어서 자동으로 로그아웃됐어요. 다시 로그인해 주세요.
+        </p>
+      )}
       <h1 className="text-3xl font-bold leading-tight sm:text-4xl">
         내 구독, 어디서 어떻게
         <br />
