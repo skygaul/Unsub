@@ -217,6 +217,11 @@ first-service/
 | `/subscriptions/new`, `/subscriptions/[id]` | 화면 | `SubscriptionForm`(클라이언트)이 API를 호출. 서비스 선택 시 이름 자동 입력 |
 | `/guides`, `/guides/[serviceId]` | 화면 | 가이드 카드 목록, 상세(결제 경로 탭 `?channel=`, 신뢰도 배지, 경고, 환불, 출처). 로그인 없이 접근 가능 |
 
+| `/calendar` | 화면 (v0.3, 2026-11-04) | 결제 달력(`?month=YYYY-MM`). 이용 중이고 다음 결제일이 있는 구독만 표시. 계산은 `src/lib/billing-calendar.ts`, 시험은 `node scripts/test-billing-calendar.mjs`. `src/lib/supabase/proxy.ts`의 보호 경로에 추가됨 |
+| 대시보드 변경 (v0.3) | 화면 | 구독 카드에 `CancelToggleButton`("해지 완료" ↔ "이용 중으로 되돌리기", 기존 PATCH API로 `status`만 변경), 해지함이 있으면 "해지해서 아끼는 돈(매달·1년)" 카드. **DB 변경 없음** |
+
+> v0.3 상태: 코드 작성·`npm run build`·`npm run lint`·계산 시험 통과, 비로그인 `/calendar`는 홈으로 307 확인. **로그인 상태의 화면 동작(해지 완료 버튼, 달력 표시)은 아직 실제 브라우저로 확인하지 않았고, 커밋·푸시도 하지 않았음**(푸시하면 Vercel에 자동 배포되므로 평가 기간에는 보류).
+
 공통 코드: `src/lib/types.ts`(타입·라벨·금액·날짜 계산), `src/lib/validation.ts`(입력 검증), `src/lib/api.ts`(인증·에러 응답 헬퍼), `src/components/`(폼, 삭제 버튼, 로그아웃, 신뢰도 배지).
 
 주의: 가이드 상세의 결제 경로 탭은 `cancel` JSON의 키를 `CHANNEL_TABS`로 분류함. 새 키를 JSON에 추가하면 `KEY_LABELS`와 `CHANNEL_TABS`에도 넣어야 함(없으면 "공통"으로 항상 표시됨).

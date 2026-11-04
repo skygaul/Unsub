@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import CancelToggleButton from "@/components/CancelToggleButton";
 import DeleteSubscriptionButton from "@/components/DeleteSubscriptionButton";
 import LogoutButton from "@/components/LogoutButton";
+import { monthlySavings } from "@/lib/billing-calendar";
 import { createClient } from "@/lib/supabase/server";
 import {
   BILLING_CYCLE_LABELS,
@@ -67,6 +69,7 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
             해지 방법 보기
           </Link>
         )}
+        <CancelToggleButton id={sub.id} name={sub.name} status={sub.status} />
         <Link href={`/subscriptions/${sub.id}`} className="hover:underline">
           수정
         </Link>
@@ -97,6 +100,7 @@ export default async function DashboardPage() {
   const active = subs.filter((s) => s.status === "active");
   const cancelled = subs.filter((s) => s.status === "cancelled");
   const monthlyTotal = active.reduce((sum, s) => sum + monthlyAmount(s), 0);
+  const savedPerMonth = monthlySavings(cancelled);
   const dueSoon = active.filter(
     (s) => s.next_billing_date && daysUntil(s.next_billing_date) >= 0 && daysUntil(s.next_billing_date) <= 7,
   );
@@ -109,6 +113,12 @@ export default async function DashboardPage() {
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{user.email}</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/calendar"
+            className="rounded-full border border-zinc-300 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          >
+            결제 달력
+          </Link>
           <Link
             href="/guides"
             className="rounded-full border border-zinc-300 px-4 py-2 text-sm transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
@@ -133,6 +143,18 @@ export default async function DashboardPage() {
           </p>
         </div>
       </section>
+
+      {cancelled.length > 0 && (
+        <section className="mt-4 rounded-xl bg-emerald-50 p-4 dark:bg-emerald-950">
+          <p className="text-sm text-emerald-800 dark:text-emerald-300">해지해서 아끼는 돈</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-900 dark:text-emerald-200">
+            매달 {formatWon(savedPerMonth)}
+          </p>
+          <p className="mt-1 text-xs text-emerald-800/80 dark:text-emerald-300/80">
+            1년이면 {formatWon(savedPerMonth * 12)} · 해지함 {cancelled.length}개 기준
+          </p>
+        </section>
+      )}
 
       <div className="mt-8 flex items-center justify-between">
         <h2 className="text-lg font-semibold">이용 중 ({active.length})</h2>

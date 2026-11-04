@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // 로그인이 필요한 경로. 낙관적 체크일 뿐이며, 실제 권한 검사는 API와 RLS에서 한다.
-const PROTECTED_PREFIXES = ["/dashboard", "/subscriptions"];
+const PROTECTED_PREFIXES = ["/dashboard", "/subscriptions", "/calendar"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
