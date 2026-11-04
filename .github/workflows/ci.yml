@@ -1,0 +1,46 @@
+# 푸시와 PR마다 린트, 시험, 빌드를 자동으로 실행한다.
+# 주의: Vercel의 자동 배포는 이 결과를 기다리지 않는다. main에 푸시하면 CI와 별개로 바로 배포된다.
+# 그래서 CI는 (1) Dependabot 같은 PR을 병합하기 전에 깨졌는지 알려 주고 (2) 푸시 직후 문제를 빨리 알리는 용도다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# 같은 브랜치에 푸시가 연달아 오면 이전 실행은 취소한다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # 개발 PC와 같은 Node 메이저 버전. 시험이 Node의 TypeScript 직접 실행 기능을 쓴다.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - run: npm ci
+
+      - name: 린트
+        run: npm run lint
+
+      # 실제 Claude를 호출하는 시험(test:ai)은 비용과 API 키가 필요해서 CI에서 실행하지 않는다.
+      - name: 시험
+        run: npm test
+
+      # 빌드에는 진짜 키가 필요 없다. 아래는 자리만 채운 가짜 값이고, 이 결과물은 배포되지 않는다.
+      - name: 빌드
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy

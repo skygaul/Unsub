@@ -4,6 +4,8 @@
 
 **배포 주소: https://unsub-unsub1.vercel.app** (Google 로그인으로 바로 사용할 수 있습니다)
 
+[![CI](https://github.com/skygaul/Unsub/actions/workflows/ci.yml/badge.svg)](https://github.com/skygaul/Unsub/actions/workflows/ci.yml)
+
 ## 문제와 해결
 구독은 쉽게 가입되지만 해지는 어렵습니다. 같은 서비스라도 앱스토어, 구글 플레이, 카드사, 통신사, 서비스 웹사이트 등 **어디서 결제했는지에 따라 해지하는 곳이 달라서** 해지 메뉴를 찾지 못하거나 환불 규정을 놓치기 쉽습니다.
 
@@ -89,13 +91,11 @@ npm run dev
 
 ### 시험
 ```bash
-node scripts/test-rule-parser.mjs       # 문자 규칙 파서
-node scripts/test-validation.mjs        # 입력 검증
-node scripts/test-billing-calendar.mjs  # 결제 달력·절약액
-node scripts/test-insights.mjs          # 구독 분석·정리 안내
-node scripts/test-exchange-rate.mjs     # 환율 (실제 환율 서비스를 한 번 호출)
-node scripts/test-idle.mjs              # 자동 로그아웃 계산
-node scripts/test-auth-cookie.mjs       # 로그인 쿠키 판별
-node scripts/test-rate-limit.mjs        # API 호출 제한
-node scripts/test-ai-parse.mjs          # Claude 실제 호출 (API 비용 발생, 1센트 이하)
+npm test                 # 시험 전체 실행 (실행한 시험별 결과와 요약을 보여 줌)
+npm test -- idle         # 이름에 "idle"이 들어간 시험만
+npm run test:ai          # Claude 실제 호출 시험 (API 키 필요, 비용 발생, 1센트 이하)
 ```
+시험은 `scripts/test-*.mjs`이고(문자 파서, 입력 검증, 결제 달력, 구독 분석, 환율, 자동 로그아웃, 로그인 쿠키, 호출 제한), `npm test`는 `test:ai`를 뺀 모두를 실행합니다.
+
+### 자동 점검 (CI)
+`main` 푸시와 PR마다 GitHub Actions([.github/workflows/ci.yml](.github/workflows/ci.yml))가 `npm run lint`, `npm test`, `npm run build`를 실행합니다. Vercel의 자동 배포는 이 결과를 기다리지 않으므로, CI는 PR을 병합하기 전에 깨졌는지 확인하고 푸시 직후 문제를 알리는 용도입니다.

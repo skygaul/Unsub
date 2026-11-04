@@ -154,6 +154,7 @@ first-service/
 | 속도 | Vercel 함수 지역을 서울(icn1)로 변경 | 체감 속도 개선 확인 |
 | v0.7 | 로그인 쿠키가 없는 방문자는 프록시가 Supabase를 부르지 않음(`lib/supabase/auth-cookie.ts`), 로딩 화면(`loading.tsx` 5개, `components/Skeleton.tsx`), 오류·404 화면(`error.tsx`, `global-error.tsx`, `not-found.tsx`) | `0458949` 푸시·배포됨. 아래 "v0.7" 참고 |
 | v0.8 | 보안 헤더·기본 CSP(`next.config.ts`), API 호출 제한 확대(`lib/rate-limit.ts`), Dependabot(`.github/dependabot.yml`) | `772932b` 푸시·배포됨. 아래 "v0.8" 참고 |
+| v0.9 | `npm test`로 시험 통합, GitHub Actions CI(린트·시험·빌드), Dependabot에 Actions 추가 | 푸시됨. 위 "v0.9" 참고 |
 
 ### v0.6 자동 로그아웃 (푸시·배포됨, 운영 동작 확인 전)
 - **동작**: 로그인한 채 **10분** 활동이 없으면 로그아웃, **만료 1분 전에 "곧 로그아웃돼요, 계속 사용하시겠어요?" 안내**(계속 사용 / 지금 로그아웃). 로그아웃되면 홈에 "자동으로 로그아웃됐어요" 안내
@@ -182,6 +183,16 @@ first-service/
 - **Dependabot** (`.github/dependabot.yml`): npm 의존성을 매주 월요일(KST) PR로 제안, 마이너·패치는 한 PR로 묶고 메이저는 개별 PR, 열린 PR 최대 5개. **GitHub 저장소 Settings > Code security에서 Dependabot alerts·security updates를 켜는 것은 사용자가 직접 해야 함**. PR은 main에 병합하기 전까지 운영에 반영되지 않음(병합하면 자동 배포되므로 `npm run build`와 시험 확인 후 병합)
 - **검증**: 운영 빌드를 띄워 응답 헤더 확인, 브라우저에서 같은 출처 요청 통과·외부 주소 요청은 CSP가 차단·Supabase 주소 요청 통과·화면 정상 동작·콘솔에는 일부러 낸 위반만 있음을 확인함. 호출 제한은 시험(`test-rate-limit.mjs`)으로만 확인했고 **실제 로그인 상태에서 429가 나는 것은 확인 전**. **2026-11-04 사용자가 로컬 운영 빌드(`npm run build && npm start`)에서 구글 로그인, 구독 추가·수정·삭제, 결제 문자 자동 입력, 결제 달력이 정상이고 콘솔에 CSP 위반이 없음을 확인함. GitHub의 Dependabot alerts·security updates도 사용자가 켬.** **배포된 운영 사이트(`unsub-unsub1.vercel.app`)에서도 사용자가 Google 로그인, 구독 추가, 결제 문자 자동 입력이 정상이고 콘솔에 CSP 위반이 없음을 확인함(2026-11-04).** 호출 제한의 429는 운영에서도 확인 기록 없음(시험 스크립트로만 확인)
 
+### v0.9 자동 점검 CI (푸시됨 2026-11-04, GitHub Actions 첫 실행 확인 전)
+- **`npm test`** = `scripts/run-tests.mjs`가 `scripts/test-*.mjs`를 모두 실행하고 시험별 결과·요약을 출력, 하나라도 실패하면 종료 코드 1(실패 출력만 자세히 보여 주고 실행 환경의 경고 문구는 걸러 냄). `npm test -- <이름 일부>`로 일부만 실행. 새 `test-*.mjs`를 만들면 자동으로 포함됨. 실제 Claude를 호출하는 `test-ai-parse.mjs`는 제외(`npm run test:ai`로 따로 실행)
+- **CI** (`.github/workflows/ci.yml`): `main` 푸시와 PR마다 `npm ci` → `npm run lint` → `npm test` → `npm run build`. Node 26(개발 PC와 같은 메이저, 시험이 Node의 TypeScript 직접 실행을 씀). 빌드는 가짜 Supabase 키(`example.supabase.co`, `dummy`)로 하며 진짜 비밀값은 쓰지 않고 결과물은 배포되지 않음. 같은 브랜치의 연속 푸시는 이전 실행을 취소
+- **중요한 한계**: Vercel 자동 배포는 CI 결과를 **기다리지 않음**. main에 푸시하면 CI가 실패해도 배포됨. CI는 ① Dependabot 등 PR을 병합하기 전에 깨졌는지 확인하고 ② 푸시 직후 문제를 빨리 알리는 용도. 배포 자체를 막으려면 PR 방식 + 브랜치 보호 규칙(CI 통과 필수)이 필요하지만, 지금처럼 main에 바로 푸시하는 흐름이 막히므로 적용하지 않았음
+- **Dependabot**: npm에 더해 GitHub Actions(`actions/checkout`, `actions/setup-node`) 버전도 매주 점검
+- **검증한 것(로컬)**: `npm test` 8개 통과, 시험을 일부러 실패시키면 종료 코드 1과 원인 출력, 필터 동작, `npm ci --dry-run`(잠금 파일 일치), 워크플로 YAML 문법, `.env.local` 없이 가짜 키로 빌드 통과(CI와 같은 조건). **아직 확인 못 한 것**: GitHub Actions에서 실제로 실행된 결과. 특히 `node-version: 26`을 setup-node가 지원하는지는 첫 실행에서 확인해야 함 — 실패하면 Actions 탭에서 "Setup Node" 단계 오류를 보고 버전을 24 등으로 낮출 것(시험이 Node의 TypeScript 직접 실행에 의존하므로 22.18 이상 필요)
+- **Dependabot 현황 (2026-11-04 확인)**: 설정 직후 PR 4개가 올라옴. #1 react·react-dom 19.3.0→19.3.1(패치, 낮은 위험), #2 typescript 5.9.3→7.0.2(메이저), #3 eslint 9→10(메이저), #4 @types/node 20→26(메이저, 타입만). **병합하면 main에 들어가 자동 배포되므로 CI가 초록색일 때만 병합**하고, 메이저(#2·#3)는 호환 문제 가능성이 커서 CI 없이 병합하지 말 것. 이 PR들은 CI 도입 전에 만들어져 CI가 안 붙어 있으므로 PR에 `@dependabot rebase` 댓글을 달아 다시 만들게 하면 CI가 실행됨. 메이저 업데이트를 받지 않으려면 PR에 `@dependabot ignore this major version` 댓글
+- **보안 알림 minimatch(중간)**: 글롭 처리의 서비스 거부 취약점. `npm audit --omit=dev`는 0개이고 문제의 패키지는 eslint 계열 플러그인이 쓰는 개발용이라 **운영 사이트에는 영향 없음**. Dependabot 보안 업데이트 작업이 실패한 것은 고친 버전(11.0.1)이 메이저라서 이 패키지를 3.x로 요구하는 eslint 플러그인이 받아들이지 못하기 때문(설정 문제 아님). 선택지: 알림을 "개발 도구에만 쓰여 운영 영향 없음"으로 Dismiss, 또는 eslint 플러그인이 새 버전을 낼 때까지 대기. `npm audit`(개발 도구 포함)에는 같은 이유의 moderate 16건이 나옴
+- 첫 실행 확인: 푸시 후 저장소의 **Actions** 탭에서 "CI" 실행이 초록색으로 끝나는지 본다. README 맨 위 배지도 초록 "passing"이 됨
+
 ### 5c. 배포·운영 메모
 - **푸시 = 자동 배포.** 코드 변경은 `git add -A && git commit && git push`로 반영(약 1분). **환경변수 변경은 재배포(Deployments > Redeploy)해야 반영**
 - Vercel 환경변수: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`(설정됨). Deployment Protection(Vercel Authentication)은 **Disabled**(켜면 공개 접속 불가)
@@ -189,9 +200,9 @@ first-service/
 - Google Auth Platform: **프로덕션 게시 완료**, Branding(홈페이지, `/privacy`), 승인된 도메인에 `unsub-unsub1.vercel.app` 추가
 - **DB 변경이 있는 버전은 푸시 전에 Supabase SQL Editor에서 SQL을 먼저 실행**(로컬과 운영이 같은 DB). 순서가 바뀌면 새 코드가 없는 컬럼을 쓰려 해서 실패함. 새 DB는 `schema.sql` → `seed.sql`만 실행
 - Anthropic Console에서 월 사용 한도 설정·잔액 확인 권장. 잔액이 0이면 AI 자동 입력만 규칙 파서로 대체되고 서비스는 계속 동작
-- 푸시 전 점검: `npm run lint`, `npm run build`, `scripts/test-*.mjs` 시험 전체
+- 푸시 전 점검: `npm run lint`, `npm test`, `npm run build` (CI가 같은 세 가지를 푸시·PR마다 실행함)
 
-### 시험 (`node scripts/<이름>.mjs`, 모두 통과)
+### 시험 (`npm test`로 전체 실행, 개별 실행은 `node scripts/<이름>.mjs`, 모두 통과)
 | 스크립트 | 확인 내용 |
 |---|---|
 | `test-rule-parser` | 규칙 파서 16건 (원화·달러·외화·중복 금액·날짜·결제 경로) |
@@ -211,7 +222,7 @@ first-service/
 1. **운영에서 아직 확인 기록이 없는 것**: 자동 로그아웃(만료 1분 전 안내 창, 10분 만료, 탭을 닫았다 돌아온 경우), 오류 화면. 문제가 있으면 `IdleLogout.tsx`·`lib/supabase/proxy.ts`·`error.tsx`를 점검
 2. 평가가 끝나면 5c의 "푸시 = 자동 배포" 제약이 풀림 (그때까지 `main` 푸시 자제)
 3. 후보 기능 (웹 범위, 사용자가 고르면 진행): 여러 문자 한꺼번에 분석, 캡처 이미지 업로드 분석, **계정 삭제 버튼**(개인정보처리방침이 "문의로 요청"이라 되어 있음), "정보가 틀렸어요" 제보 버튼(새 테이블 필요), 불만 접수 초안 생성(`complaint_drafts` 활용), 서비스 추가(멜론·지니·밀리의서재·리디 등)
-4. 운영 품질: API 테스트 + GitHub Actions CI, 오류 모니터링, 자체 도메인, 호출 제한을 서버 메모리 대신 DB로(서버가 늘어날 때)
+4. 운영 품질: ~~GitHub Actions CI~~(v0.9에서 도입), API 통합 테스트(로그인 필요), 오류 모니터링, 자체 도메인, 호출 제한을 서버 메모리 대신 DB로(서버가 늘어날 때)
 5. 이름 확정 시 PRD 제목("가칭") 정리
 
 ---
@@ -277,7 +288,7 @@ first-service/
 2. [PRD.md](PRD.md) 12장 변경 이력으로 버전별 변경 파악
 3. 코드 작성 전 `node_modules/next/dist/docs/01-app/`의 관련 문서 확인 (Next 16)
 4. `.env.local` 존재 여부 확인 → 없으면 사용자에게 `.env.example`을 보고 만들게 안내(값을 채팅에 붙여넣지 않게)
-5. `git status`로 미커밋 변경 확인, `npm run build`와 `scripts/test-*.mjs` 시험 전체이 통과하는지 확인한 뒤 작업 시작
+5. `git status`로 미커밋 변경 확인, `npm run lint`, `npm test`, `npm run build`가 통과하는지 확인한 뒤 작업 시작
 6. DB를 바꾸는 작업이면 SQL 파일을 만들고 **사용자가 Supabase에서 먼저 실행한 뒤** 푸시하게 안내
 7. 작업이 끝나면 이 문서의 5·6장과 PRD 12장을 **고쳐서** 갱신(옛 상태 문장을 남기지 말 것)
 8. **기능·수집 정보·외부 서비스·쿠키가 바뀌면 `README.md`(주요 기능, 구현 위치 표, 한계)와 `src/app/privacy/page.tsx`(수집 항목, 이용 목적, 외부 서비스, 쿠키, 수정일 `UPDATED`)도 함께 갱신**할 것. 개인정보처리방침은 Google 로그인 게시 때 심사에 쓰인 공개 페이지임 (2026-11-04에 통화·쿠키·환율 서비스·자동 로그아웃 반영)
