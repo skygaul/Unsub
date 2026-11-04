@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # 개발 PC와 같은 Node 메이저 버전. 시험이 Node의 TypeScript 직접 실행 기능을 쓴다.
       - uses: actions/setup-node@v4
