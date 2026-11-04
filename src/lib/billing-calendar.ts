@@ -1,8 +1,8 @@
-import { monthlyAmount, type Subscription } from "@/lib/types";
+import { USD_KRW_RATE, monthlyAmount, toKrw, type Subscription } from "@/lib/types";
 
 export type CalendarItem = Pick<
   Subscription,
-  "id" | "name" | "amount" | "billing_cycle" | "next_billing_date" | "service_id"
+  "id" | "name" | "amount" | "currency" | "billing_cycle" | "next_billing_date" | "service_id"
 >;
 
 /** "YYYY-MM" 형식이면 [년, 월]을, 아니면 null을 돌려준다. */
@@ -48,13 +48,16 @@ export function billingsByDay(items: CalendarItem[], year: number, month: number
 }
 
 /** 달력에 나온 구독의 실제 결제 합계(연간 결제는 결제되는 달에만 전액). */
-export function monthTotal(byDay: Map<number, CalendarItem[]>) {
+export function monthTotal(byDay: Map<number, CalendarItem[]>, rate: number = USD_KRW_RATE) {
   let sum = 0;
-  for (const list of byDay.values()) for (const s of list) sum += s.amount;
+  for (const list of byDay.values()) for (const s of list) sum += toKrw(s.amount, s.currency, rate);
   return sum;
 }
 
-/** 해지한 구독으로 매달 아끼는 금액(연간 결제는 12로 나눈 값). */
-export function monthlySavings(cancelled: Pick<Subscription, "amount" | "billing_cycle">[]) {
-  return cancelled.reduce((sum, s) => sum + monthlyAmount(s), 0);
+/** 해지한 구독으로 매달 아끼는 금액(원화 환산, 연간 결제는 12로 나눈 값). */
+export function monthlySavings(
+  cancelled: Pick<Subscription, "amount" | "currency" | "billing_cycle">[],
+  rate: number = USD_KRW_RATE,
+) {
+  return cancelled.reduce((sum, s) => sum + monthlyAmount(s, rate), 0);
 }

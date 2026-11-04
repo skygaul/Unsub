@@ -7,8 +7,8 @@ register("./ts-loader.mjs", import.meta.url);
 const { billingsByDay, daysInMonth, monthTotal, monthlySavings, parseMonth, shiftMonth } =
   await import("../src/lib/billing-calendar.ts");
 
-const sub = (id, amount, billing_cycle, next_billing_date) => ({
-  id, name: id, amount, billing_cycle, next_billing_date, service_id: null,
+const sub = (id, amount, billing_cycle, next_billing_date, currency = "KRW") => ({
+  id, name: id, amount, currency, billing_cycle, next_billing_date, service_id: null,
 });
 
 // 월 계산
@@ -50,5 +50,21 @@ assert.equal(
   17000 + 8000,
 );
 assert.equal(monthlySavings([]), 0);
+
+// 달러는 1달러 = 1,400원으로 환산
+assert.equal(
+  monthlySavings([{ amount: 20, currency: "USD", billing_cycle: "monthly" }]),
+  28000,
+);
+assert.equal(
+  monthlySavings([{ amount: 120, currency: "USD", billing_cycle: "yearly" }]),
+  14000, // 168,000원 / 12
+);
+// 실제 환율을 넘기면 그 값으로 환산한다
+assert.equal(monthlySavings([{ amount: 20, currency: "USD", billing_cycle: "monthly" }], 1344.59), 26892);
+const usdMonth2 = billingsByDay([sub("claude", 20, "monthly", "2026-11-10", "USD")], 2026, 11);
+assert.equal(monthTotal(usdMonth2, 1300), 26000);
+const usdMonth =billingsByDay([sub("claude", 20, "monthly", "2026-11-10", "USD")], 2026, 11);
+assert.equal(monthTotal(usdMonth), 28000);
 
 console.log("결제 달력 시험 통과");

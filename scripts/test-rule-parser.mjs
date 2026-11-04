@@ -39,7 +39,28 @@ const cases = [
   },
   {
     text: "[Google Play] Claude Pro 구독 $20.00 결제",
-    expect: { complete: false, service_id: "claude", amount: null },
+    expect: { complete: true, service_id: "claude", amount: 20, currency: "USD", payment_channel: "google_play" },
+  },
+  {
+    text: "Notion 연간 구독 US$ 96.50 갱신 완료",
+    expect: { complete: true, service_id: "notion", amount: 96.5, currency: "USD", billing_cycle: "yearly" },
+  },
+  {
+    text: "ChatGPT Plus 20 USD 결제",
+    expect: { complete: true, service_id: "chatgpt", amount: 20, currency: "USD" },
+  },
+  {
+    // 원화와 달러가 함께 있으면 확정하지 않는다
+    text: "Claude Pro $20.00 결제 (약 28,000원)",
+    expect: { complete: false, service_id: "claude", amount: null, currency: "KRW" },
+  },
+  {
+    text: "Netflix €9.99 결제",
+    expect: { complete: false, service_id: "netflix", amount: null },
+  },
+  {
+    text: "넷플릭스 17,000원 결제",
+    expect: { complete: true, service_id: "netflix", amount: 17000, currency: "KRW" },
   },
   {
     text: "CJ대한통운 택배가 오늘 도착 예정입니다. 상품 12,000원",

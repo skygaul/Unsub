@@ -1,16 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import CancelToggleButton from "@/components/CancelToggleButton";
+import DashboardInsights from "@/components/DashboardInsights";
 import DeleteSubscriptionButton from "@/components/DeleteSubscriptionButton";
 import LogoutButton from "@/components/LogoutButton";
 import { monthlySavings } from "@/lib/billing-calendar";
+import { describeRate, getUsdKrwRate } from "@/lib/exchange-rate";
 import { createClient } from "@/lib/supabase/server";
 import {
   BILLING_CYCLE_LABELS,
   PAYMENT_CHANNEL_LABELS,
   daysUntil,
+  formatMoney,
   formatWon,
   monthlyAmount,
+  toKrw,
   type Subscription,
 } from "@/lib/types";
 
@@ -33,7 +37,7 @@ function DueBadge({ date }: { date: string }) {
   );
 }
 
-function SubscriptionCard({ sub }: { sub: Subscription }) {
+function SubscriptionCard({ sub, rate }: { sub: Subscription; rate: number }) {
   const cancelled = sub.status === "cancelled";
   return (
     <li
@@ -45,7 +49,9 @@ function SubscriptionCard({ sub }: { sub: Subscription }) {
         <div className="min-w-0">
           <p className="truncate text-base font-semibold">{sub.name}</p>
           <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-            {formatWon(sub.amount)} · {BILLING_CYCLE_LABELS[sub.billing_cycle]} ·{" "}
+            {formatMoney(sub.amount, sub.currency)}
+            {sub.currency === "USD" && ` (약 ${formatWon(toKrw(sub.amount, sub.currency, rate))})`} ·{" "}
+            {BILLING_CYCLE_LABELS[sub.billing_cycle]} ·{" "}
             {PAYMENT_CHANNEL_LABELS[sub.payment_channel]}
           </p>
           {sub.next_billing_date && !cancelled && (
@@ -90,17 +96,23 @@ export default async function DashboardPage() {
   // proxy는 낙관적 체크일 뿐이므로 여기서도 직접 확인한다.
   if (!user) redirect("/");
 
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .order("next_billing_date", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: false });
+  // 구독 조회와 환율 조회를 동시에 시작해 기다리는 시간을 줄인다.
+  const [{ data, error }, usdKrw] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("*")
+      .order("next_billing_date", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false }),
+    getUsdKrwRate(),
+  ]);
+  const rate = usdKrw.rate;
 
   const subs = (data ?? []) as Subscription[];
   const active = subs.filter((s) => s.status === "active");
   const cancelled = subs.filter((s) => s.status === "cancelled");
-  const monthlyTotal = active.reduce((sum, s) => sum + monthlyAmount(s), 0);
-  const savedPerMonth = monthlySavings(cancelled);
+  const monthlyTotal = active.reduce((sum, s) => sum + monthlyAmount(s, rate), 0);
+  const savedPerMonth = monthlySavings(cancelled, rate);
+  const hasUsd = subs.some((s) => s.currency === "USD");
   const dueSoon = active.filter(
     (s) => s.next_billing_date && daysUntil(s.next_billing_date) >= 0 && daysUntil(s.next_billing_date) <= 7,
   );
@@ -133,7 +145,10 @@ export default async function DashboardPage() {
         <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-900">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">한 달 구독료</p>
           <p className="mt-1 text-2xl font-bold">{formatWon(monthlyTotal)}</p>
-          <p className="mt-1 text-xs text-zinc-500">연간 결제는 12개월로 나눠 계산해요</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            연간 결제는 12개월로 나눠 계산해요
+          </p>
+          {hasUsd && <p className="mt-0.5 text-xs text-zinc-500">달러는 {describeRate(usdKrw)}로 환산</p>}
         </div>
         <div className="rounded-xl bg-zinc-100 p-4 dark:bg-zinc-900">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">7일 안에 결제될 구독</p>
@@ -155,6 +170,8 @@ export default async function DashboardPage() {
           </p>
         </section>
       )}
+
+      <DashboardInsights active={active} rate={rate} />
 
       <div className="mt-8 flex items-center justify-between">
         <h2 className="text-lg font-semibold">이용 중 ({active.length})</h2>
@@ -190,7 +207,7 @@ export default async function DashboardPage() {
       {active.length > 0 && (
         <ul className="mt-4 flex flex-col gap-3">
           {active.map((s) => (
-            <SubscriptionCard key={s.id} sub={s} />
+            <SubscriptionCard key={s.id} sub={s} rate={rate} />
           ))}
         </ul>
       )}
@@ -200,7 +217,7 @@ export default async function DashboardPage() {
           <h2 className="mt-10 text-lg font-semibold">해지함 ({cancelled.length})</h2>
           <ul className="mt-4 flex flex-col gap-3">
             {cancelled.map((s) => (
-              <SubscriptionCard key={s.id} sub={s} />
+              <SubscriptionCard key={s.id} sub={s} rate={rate} />
             ))}
           </ul>
         </>

@@ -10,8 +10,9 @@ import {
   shiftMonth,
   type CalendarItem,
 } from "@/lib/billing-calendar";
+import { describeRate, getUsdKrwRate } from "@/lib/exchange-rate";
 import { createClient } from "@/lib/supabase/server";
-import { formatWon, todayKst } from "@/lib/types";
+import { formatMoney, formatWon, todayKst } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "결제 달력 | 구독 해지 도우미",
@@ -31,15 +32,19 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
   const today = todayKst();
   const [year, month] = parseMonth(raw) ?? (today.slice(0, 7).split("-").map(Number) as [number, number]);
 
-  const { data, error } = await supabase
-    .from("subscriptions")
-    .select("id, name, amount, billing_cycle, next_billing_date, service_id")
-    .eq("status", "active")
-    .not("next_billing_date", "is", null);
+  const [{ data, error }, usdKrw] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("id, name, amount, currency, billing_cycle, next_billing_date, service_id")
+      .eq("status", "active")
+      .not("next_billing_date", "is", null),
+    getUsdKrwRate(),
+  ]);
 
   const items = (data ?? []) as CalendarItem[];
   const byDay = billingsByDay(items, year, month);
-  const total = monthTotal(byDay);
+  const total = monthTotal(byDay, usdKrw.rate);
+  const hasUsd = items.some((s) => s.currency === "USD");
   const count = Array.from(byDay.values()).reduce((n, list) => n + list.length, 0);
 
   const lastDay = daysInMonth(year, month);
@@ -98,6 +103,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
         <p className="mt-1 text-2xl font-bold">{formatWon(total)}</p>
         <p className="mt-1 text-xs text-zinc-500">
           {count}건 · 연간 결제는 결제되는 달에 전액이 잡혀요
+          {hasUsd && ` · 달러는 ${describeRate(usdKrw)}로 환산`}
         </p>
       </section>
 
@@ -139,7 +145,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
                           <li
                             key={s.id}
                             className="truncate rounded bg-blue-50 px-1 py-0.5 text-[11px] text-blue-800 dark:bg-blue-950 dark:text-blue-200"
-                            title={`${s.name} ${formatWon(s.amount)}`}
+                            title={`${s.name} ${formatMoney(s.amount, s.currency)}`}
                           >
                             {s.name}
                           </li>
@@ -166,7 +172,7 @@ export default async function CalendarPage({ searchParams }: PageProps<"/calenda
                   <span className="font-medium">{s.name}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-3">
-                  <span>{formatWon(s.amount)}</span>
+                  <span>{formatMoney(s.amount, s.currency)}</span>
                   {s.service_id && (
                     <Link
                       href={`/guides/${s.service_id}`}

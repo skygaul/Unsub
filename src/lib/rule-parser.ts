@@ -6,6 +6,8 @@ export type ParsedPayment = {
   service_name: string | null;
   service_id: string | null;
   amount: number | null;
+  /** amount의 통화. 금액을 못 읽었을 때도 기본값 KRW가 들어간다. */
+  currency: "KRW" | "USD";
   billing_cycle: "monthly" | "yearly" | null;
   next_billing_date: string | null;
   payment_channel: "direct" | "apple" | "google_play" | "carrier" | "unknown";
@@ -45,6 +47,14 @@ function parseAmount(text: string) {
     (n) => n > 0 && n <= 10_000_000,
   );
   return values;
+}
+
+/** "$20.00", "US$ 9.99", "20 USD", "20달러" 같은 달러 금액. 소수 둘째 자리까지. */
+function parseUsdAmounts(text: string) {
+  const re =
+    /(?:US\s?\$|\$)\s?(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)|(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?)\s*(?:USD|달러)/gi;
+  const values = [...text.matchAll(re)].map((m) => Number((m[1] ?? m[2]).replace(/,/g, "")));
+  return [...new Set(values)].filter((n) => n > 0 && n <= 100_000);
 }
 
 function pad(n: number) {
@@ -111,16 +121,26 @@ export function ruleParse(text: string, services: ServiceInfo[], today: string):
     notes.push("여러 서비스 이름이 보여서 직접 골라 주세요.");
   }
 
-  // 금액: 서로 다른 금액이 여러 개거나 외화면 확정하지 않는다
-  const foreign = /\$\s?\d|USD|달러|€|EUR|¥|JPY/i.test(text);
-  const amounts = parseAmount(text);
+  // 금액: 원화 또는 달러 금액이 하나로 정해질 때만 확정한다.
+  // 원화와 달러가 함께 있거나, 금액이 여러 개거나, 달러 외 외화면 확정하지 않는다.
+  const otherForeign = /€|EUR|¥|JPY/i.test(text);
+  const krwAmounts = parseAmount(text);
+  const usdAmounts = parseUsdAmounts(text);
   let amount: number | null = null;
-  if (foreign) {
-    notes.push("외화 결제로 보여요. 원화 금액을 직접 입력해 주세요.");
-  } else if (amounts.length === 1) {
-    amount = amounts[0];
-  } else if (amounts.length > 1) {
+  let currency: ParsedPayment["currency"] = "KRW";
+  if (otherForeign) {
+    notes.push("달러 외 외화 결제로 보여요. 금액을 직접 입력해 주세요.");
+  } else if (krwAmounts.length > 0 && usdAmounts.length > 0) {
+    notes.push("원화와 달러 금액이 함께 보여서 직접 확인해 주세요.");
+  } else if (usdAmounts.length === 1) {
+    amount = usdAmounts[0];
+    currency = "USD";
+  } else if (usdAmounts.length > 1 || krwAmounts.length > 1) {
     notes.push("금액이 여러 개 보여서 직접 확인해 주세요.");
+  } else if (krwAmounts.length === 1) {
+    amount = krwAmounts[0];
+  } else if (/\$|USD|달러/i.test(text)) {
+    notes.push("외화 결제로 보이는데 금액을 읽지 못했어요. 직접 입력해 주세요.");
   }
 
   const billingCycle: ParsedPayment["billing_cycle"] = /연간|연\s*구독|1\s*년|yearly|annual/i.test(text)
@@ -143,6 +163,7 @@ export function ruleParse(text: string, services: ServiceInfo[], today: string):
     service_name: serviceName,
     service_id: serviceId,
     amount,
+    currency,
     billing_cycle: billingCycle,
     next_billing_date: nextDate,
     payment_channel: channel,

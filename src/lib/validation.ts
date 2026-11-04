@@ -1,8 +1,10 @@
 import {
   BILLING_CYCLES,
+  CURRENCIES,
   PAYMENT_CHANNELS,
   STATUSES,
   type BillingCycle,
+  type Currency,
   type PaymentChannel,
   type Status,
 } from "@/lib/types";
@@ -10,6 +12,7 @@ import {
 export type SubscriptionInput = {
   name: string;
   amount: number;
+  currency: Currency;
   billing_cycle: BillingCycle;
   next_billing_date: string | null;
   payment_channel: PaymentChannel;
@@ -23,6 +26,7 @@ type Result =
   | { ok: false; error: string };
 
 const MAX_AMOUNT = 10_000_000;
+const MAX_USD_AMOUNT = 100_000;
 
 function isDateString(v: unknown): v is string {
   if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
@@ -50,15 +54,31 @@ export function parseSubscriptionInput(body: unknown, partial: boolean): Result 
     out.name = name;
   }
 
+  if (has("currency")) {
+    if (!CURRENCIES.includes(b.currency as Currency)) {
+      return { ok: false, error: "통화가 올바르지 않아요." };
+    }
+    out.currency = b.currency as Currency;
+  } else if (!partial) {
+    out.currency = "KRW";
+  }
+
   if (!partial || has("amount")) {
     const amount = b.amount;
-    if (
-      typeof amount !== "number" ||
-      !Number.isInteger(amount) ||
-      amount < 0 ||
-      amount > MAX_AMOUNT
+    // 통화를 함께 보내지 않은 수정 요청은 기존 통화를 알 수 없으므로 원화(정수) 기준으로 검사한다.
+    const currency = out.currency ?? "KRW";
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount < 0) {
+      return { ok: false, error: "금액은 0 이상의 숫자로 입력해 주세요." };
+    }
+    if (currency === "KRW") {
+      if (!Number.isInteger(amount) || amount > MAX_AMOUNT) {
+        return { ok: false, error: "원화 금액은 0원 이상의 정수로 입력해 주세요." };
+      }
+    } else if (
+      Math.round(amount * 100) / 100 !== amount ||
+      amount > MAX_USD_AMOUNT
     ) {
-      return { ok: false, error: "금액은 0원 이상의 정수로 입력해 주세요." };
+      return { ok: false, error: "달러 금액은 소수 둘째 자리까지 입력해 주세요." };
     }
     out.amount = amount;
   }

@@ -24,8 +24,9 @@ create table if not exists public.subscriptions (
   user_id           uuid not null default auth.uid() references auth.users (id) on delete cascade,
   service_id        text references public.services (id) on delete set null,
   name              text not null check (char_length(name) between 1 and 100),
-  amount            integer not null check (amount >= 0),
-  billing_cycle     text not null check (billing_cycle in ('monthly', 'yearly')),
+  amount            numeric(12, 2) not null check (amount >= 0),
+  currency          text not null default 'KRW' check (currency in ('KRW', 'USD')),
+  billing_cycle    text not null check (billing_cycle in ('monthly', 'yearly')),
   next_billing_date date,
   payment_channel   text not null default 'unknown'
                     check (payment_channel in ('direct', 'apple', 'google_play', 'carrier', 'unknown')),

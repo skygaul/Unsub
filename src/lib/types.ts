@@ -7,6 +7,17 @@ export const PAYMENT_CHANNELS = [
   "unknown",
 ] as const;
 export const STATUSES = ["active", "cancelled"] as const;
+export const CURRENCIES = ["KRW", "USD"] as const;
+
+export type Currency = (typeof CURRENCIES)[number];
+
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  KRW: "원",
+  USD: "달러",
+};
+
+/** 환율 서비스를 쓸 수 없을 때만 쓰는 기본 환율(원/달러). 평소에는 exchange-rate.ts가 가져온 실제 환율을 쓴다. */
+export const USD_KRW_RATE = 1400;
 
 export type BillingCycle = (typeof BILLING_CYCLES)[number];
 export type PaymentChannel = (typeof PAYMENT_CHANNELS)[number];
@@ -36,6 +47,7 @@ export type Subscription = {
   service_id: string | null;
   name: string;
   amount: number;
+  currency: Currency;
   billing_cycle: BillingCycle;
   next_billing_date: string | null;
   payment_channel: PaymentChannel;
@@ -72,13 +84,30 @@ export const VERIFICATION_LABELS: Record<Verification, string> = {
   blog_only: "공식 확인 전 (참고용)",
 };
 
-/** 월 환산 금액(원). 연간은 12로 나눠 반올림한다. */
-export function monthlyAmount(s: Pick<Subscription, "amount" | "billing_cycle">) {
-  return s.billing_cycle === "yearly" ? Math.round(s.amount / 12) : s.amount;
+/** 금액을 원화로 바꾼다. 달러는 주어진 환율(기본값 USD_KRW_RATE)로 환산해 반올림한다. */
+export function toKrw(amount: number, currency: Currency, rate: number = USD_KRW_RATE) {
+  return currency === "USD" ? Math.round(amount * rate) : amount;
+}
+
+/** 월 환산 금액(원). 달러는 환산하고, 연간은 12로 나눠 반올림한다. */
+export function monthlyAmount(
+  s: Pick<Subscription, "amount" | "currency" | "billing_cycle">,
+  rate: number = USD_KRW_RATE,
+) {
+  const krw = toKrw(s.amount, s.currency, rate);
+  return s.billing_cycle === "yearly" ? Math.round(krw / 12) : krw;
 }
 
 export function formatWon(n: number) {
   return `${n.toLocaleString("ko-KR")}원`;
+}
+
+/** 결제한 통화 그대로 표시한다. 달러는 "$20.00", 원은 "17,000원". */
+export function formatMoney(amount: number, currency: Currency) {
+  if (currency === "USD") {
+    return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  return formatWon(amount);
 }
 
 /** 한국 시간 기준 오늘 날짜(YYYY-MM-DD) */

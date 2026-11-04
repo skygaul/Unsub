@@ -6,8 +6,11 @@ import { useState } from "react";
 import {
   BILLING_CYCLES,
   BILLING_CYCLE_LABELS,
+  CURRENCIES,
+  CURRENCY_LABELS,
   PAYMENT_CHANNELS,
   PAYMENT_CHANNEL_LABELS,
+  type Currency,
   type Subscription,
 } from "@/lib/types";
 
@@ -19,8 +22,9 @@ type Props = {
   initial?: Subscription;
 };
 
-const inputClass =
-  "w-full rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-zinc-900 dark:border-zinc-700 dark:focus:border-zinc-300";
+const fieldClass =
+  "rounded-lg border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-zinc-900 dark:border-zinc-700 dark:focus:border-zinc-300";
+const inputClass = `w-full ${fieldClass}`;
 
 export default function SubscriptionForm({ services, initial }: Props) {
   const router = useRouter();
@@ -29,6 +33,7 @@ export default function SubscriptionForm({ services, initial }: Props) {
   const [serviceId, setServiceId] = useState(initial?.service_id ?? "");
   const [name, setName] = useState(initial?.name ?? "");
   const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
+  const [currency, setCurrency] = useState<Currency>(initial?.currency ?? "KRW");
   const [cycle, setCycle] = useState(initial?.billing_cycle ?? "monthly");
   const [nextDate, setNextDate] = useState(initial?.next_billing_date ?? "");
   const [channel, setChannel] = useState(initial?.payment_channel ?? "unknown");
@@ -73,6 +78,7 @@ export default function SubscriptionForm({ services, initial }: Props) {
         service_name: string | null;
         service_id: string | null;
         amount: number | null;
+        currency?: Currency;
         billing_cycle: "monthly" | "yearly" | null;
         next_billing_date: string | null;
         payment_channel: typeof channel;
@@ -83,7 +89,10 @@ export default function SubscriptionForm({ services, initial }: Props) {
         setServiceId(d.service_id);
       }
       if (d.service_name) setName(d.service_name);
-      if (d.amount !== null) setAmount(String(d.amount));
+      if (d.amount !== null) {
+        setAmount(String(d.amount));
+        if (d.currency === "USD" || d.currency === "KRW") setCurrency(d.currency);
+      }
       if (d.billing_cycle) setCycle(d.billing_cycle);
       if (d.next_billing_date) setNextDate(d.next_billing_date);
       setChannel(d.payment_channel);
@@ -129,8 +138,19 @@ export default function SubscriptionForm({ services, initial }: Props) {
     setError(null);
 
     const amountNumber = Number(amount);
-    if (amount.trim() === "" || !Number.isInteger(amountNumber) || amountNumber < 0) {
-      setError("금액은 0원 이상의 숫자로 입력해 주세요.");
+    const validAmount =
+      amount.trim() !== "" &&
+      Number.isFinite(amountNumber) &&
+      amountNumber >= 0 &&
+      (currency === "KRW"
+        ? Number.isInteger(amountNumber)
+        : Math.round(amountNumber * 100) / 100 === amountNumber);
+    if (!validAmount) {
+      setError(
+        currency === "KRW"
+          ? "금액은 0원 이상의 정수로 입력해 주세요."
+          : "달러 금액은 소수 둘째 자리까지 입력해 주세요. (예: 20.00)",
+      );
       return;
     }
 
@@ -144,6 +164,7 @@ export default function SubscriptionForm({ services, initial }: Props) {
           body: JSON.stringify({
             name,
             amount: amountNumber,
+            currency,
             billing_cycle: cycle,
             next_billing_date: nextDate || null,
             payment_channel: channel,
@@ -244,19 +265,50 @@ export default function SubscriptionForm({ services, initial }: Props) {
         />
       </label>
 
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="font-medium">결제 금액 (원)</span>
-          <input
-            value={amount}
-            onChange={(e) => setAmount(e.target.value.replace(/[^\d]/g, ""))}
-            inputMode="numeric"
-            required
-            placeholder="17000"
-            className={inputClass}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm">
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
+          <label htmlFor="amount" className="font-medium">
+            결제 금액
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="amount"
+              value={amount}
+              onChange={(e) =>
+                setAmount(
+                  currency === "USD"
+                    ? e.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1")
+                    : e.target.value.replace(/[^\d]/g, ""),
+                )
+              }
+              inputMode={currency === "USD" ? "decimal" : "numeric"}
+              required
+              placeholder={currency === "USD" ? "20.00" : "17000"}
+              className={`${fieldClass} min-w-0 flex-1`}
+            />
+            <select
+              value={currency}
+              onChange={(e) => {
+                setCurrency(e.target.value as Currency);
+                setAmount("");
+              }}
+              aria-label="통화"
+              className={`${fieldClass} w-[4.5rem] shrink-0`}
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {CURRENCY_LABELS[c]}
+                </option>
+              ))}
+            </select>
+          </div>
+          {currency === "USD" && (
+            <span className="text-xs text-zinc-500">
+              합계와 비중은 그날의 환율로 원화로 환산해서 계산해요.
+            </span>
+          )}
+        </div>
+        <label className="flex w-24 shrink-0 flex-col gap-1.5 text-sm">
           <span className="font-medium">결제 주기</span>
           <select
             value={cycle}

@@ -35,7 +35,8 @@ function buildSchema(serviceIds: string[]) {
     is_subscription_payment: z.boolean(),
     service_name: z.string().nullable(),
     service_id: serviceIdSchema,
-    amount: z.number().int().nullable(),
+    amount: z.number().nullable(),
+    currency: z.enum(["KRW", "USD"]),
     billing_cycle: z.enum(["monthly", "yearly"]).nullable(),
     next_billing_date: z.string().nullable(),
     payment_channel: z.enum(["direct", "apple", "google_play", "carrier", "unknown"]),
@@ -54,7 +55,8 @@ function buildSystemPrompt(serviceIds: string[]) {
 - is_subscription_payment: 정기결제·구독·멤버십·자동결제로 보이면 true. 일회성 쇼핑, 광고, 결제와 무관한 글이면 false.
 - service_name: 서비스·가맹점 이름을 사람이 읽는 형태로. 모르면 null.
 - service_id: 아래 목록 중 같은 서비스가 있으면 그 id, 없으면 null. 목록: ${serviceIds.join(", ") || "(없음)"}
-- amount: 이번에 결제된(또는 결제될) 금액을 원 단위 정수로. 쉼표와 "원"은 제거. 외화이거나 금액을 알 수 없으면 null.
+- amount: 이번에 결제된(또는 결제될) 금액을 문자에 적힌 통화 그대로 숫자로. 쉼표와 통화 표시는 제거. 원화는 원 단위 정수, 달러는 소수 둘째 자리까지(예: 20.00). 환율 계산은 하지 말 것. 금액을 알 수 없거나 원·달러가 아닌 외화이면 null.
+- currency: 금액이 원화면 "KRW", 달러($, USD)면 "USD". 금액이 null이면 "KRW".
 - billing_cycle: 문장에 월/매월/monthly면 "monthly", 연/연간/1년/yearly면 "yearly". 근거가 없으면 null.
 - next_billing_date: 다음 결제일이 문장에 직접 있을 때만 YYYY-MM-DD로. 연도가 없으면 오늘 이후 가장 가까운 날짜로 추정. 근거가 없으면 null. 결제일 자체를 다음 결제일로 착각하지 말 것.
 - payment_channel: "App Store", "Apple", "iTunes"가 보이면 "apple". "Google Play"면 "google_play". 통신사 소액결제·휴대폰결제면 "carrier". 서비스 이름과 카드사만 보이면 "direct". 단서가 없으면 "unknown".

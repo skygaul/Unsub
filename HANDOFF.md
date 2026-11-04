@@ -220,7 +220,15 @@ first-service/
 | `/calendar` | 화면 (v0.3, 2026-11-04) | 결제 달력(`?month=YYYY-MM`). 이용 중이고 다음 결제일이 있는 구독만 표시. 계산은 `src/lib/billing-calendar.ts`, 시험은 `node scripts/test-billing-calendar.mjs`. `src/lib/supabase/proxy.ts`의 보호 경로에 추가됨 |
 | 대시보드 변경 (v0.3) | 화면 | 구독 카드에 `CancelToggleButton`("해지 완료" ↔ "이용 중으로 되돌리기", 기존 PATCH API로 `status`만 변경), 해지함이 있으면 "해지해서 아끼는 돈(매달·1년)" 카드. **DB 변경 없음** |
 
-> v0.3 상태: 코드 작성·`npm run build`·`npm run lint`·계산 시험 통과, 비로그인 `/calendar`는 홈으로 307 확인. **로그인 상태의 화면 동작(해지 완료 버튼, 달력 표시)은 아직 실제 브라우저로 확인하지 않았고, 커밋·푸시도 하지 않았음**(푸시하면 Vercel에 자동 배포되므로 평가 기간에는 보류).
+| 대시보드 분석 (v0.4, 2026-11-04) | 화면 | `DashboardInsights` 컴포넌트: "정리해 볼까요?" 안내 카드, 분류별 비중 막대, 가장 비싼 구독 3개, 1년 총액. 계산은 `src/lib/insights.ts`(분류 표 `SERVICE_CATEGORY`, 규칙 `findOverlaps`), 시험은 `node scripts/test-insights.mjs`. **새 서비스를 `cancel-guides.json`에 추가하면 `SERVICE_CATEGORY`에도 넣어야 함**(없으면 "기타"). DB 변경 없음 |
+
+| 달러 결제 (v0.5, 2026-11-04) | DB·API·화면 | `subscriptions.currency`(KRW\|USD) 추가, `amount`는 `numeric(12,2)`. 환산은 **실제 환율**: `src/lib/exchange-rate.ts`의 `getUsdKrwRate()`(Frankfurter → ExchangeRate-API → 기본값 `USD_KRW_RATE`=1,400, 1시간 캐시, 3초 제한시간, 500~3000 범위 밖 값은 버림)가 대시보드·달력 서버 페이지에서 구독 조회와 동시에 호출되고, `toKrw`·`monthlyAmount`·`monthlySavings`·`monthTotal`·인사이트 함수에 `rate`로 전달됨. 표시는 `formatMoney`, `describeRate`. 시험 `node scripts/test-exchange-rate.mjs`(실제 호출 1회). 검증은 `validation.ts`(원화 정수, 달러 소수 둘째 자리·10만 달러 이하), 문자 파서는 `rule-parser.ts`(`parseUsdAmounts`)와 `parse-payment.ts`(스키마에 `currency`). 시험: `node scripts/test-validation.mjs`, `test-rule-parser.mjs`(16건) |
+
+> ⚠️ **v0.5 배포 순서**: 코드를 푸시하기 **전에** Supabase SQL Editor에서 `supabase/migration-v0.5-currency.sql`을 실행해야 함(여러 번 실행해도 안전, 기존 구독은 KRW로 유지, 기존 앱 코드도 계속 동작). 순서가 바뀌면 새 코드가 없는 `currency` 컬럼을 조회·저장하려 해서 결제 달력과 구독 추가가 실패함. 새로 만드는 DB는 `schema.sql`만 실행하면 됨.
+
+> v0.4 상태: 코드 작성·빌드·린트·시험 3종 통과. 로그인 상태 화면은 사용자가 확인한 뒤 푸시해야 함(푸시 시 Vercel 자동 배포).
+
+> v0.3 상태: **v0.3은 2026-11-04 커밋·푸시·배포 완료(`3843def`).** 아래는 푸시 전 기록: 코드 작성·`npm run build`·`npm run lint`·계산 시험 통과, 비로그인 `/calendar`는 홈으로 307 확인. **로그인 상태의 화면 동작(해지 완료 버튼, 달력 표시)은 아직 실제 브라우저로 확인하지 않았고, 커밋·푸시도 하지 않았음**(푸시하면 Vercel에 자동 배포되므로 평가 기간에는 보류).
 
 공통 코드: `src/lib/types.ts`(타입·라벨·금액·날짜 계산), `src/lib/validation.ts`(입력 검증), `src/lib/api.ts`(인증·에러 응답 헬퍼), `src/components/`(폼, 삭제 버튼, 로그아웃, 신뢰도 배지).
 
