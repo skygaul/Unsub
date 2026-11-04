@@ -73,6 +73,8 @@ export function topExpensive<T extends Sub>(
 
 export type OverlapHint = {
   key: string;
+  /** 이 안내가 붙는 분류. 구독 분석 카드에서 해당 분류 막대 아래에 보여 준다. */
+  category: CategoryId;
   title: string;
   detail: string;
   /** 해지 방법을 볼 수 있는 구독 (service_id가 있는 것만) */
@@ -107,6 +109,7 @@ export function findOverlaps(active: Sub[], rate: number = USD_KRW_RATE): Overla
     const monthly = list.reduce((sum, s) => sum + monthlyAmount(s, rate), 0);
     hints.push({
       key: `dup-${serviceId}`,
+      category: categoryOf(list[0]),
       title: `${list[0].name}을(를) ${list.length}번 등록했어요`,
       detail: `같은 서비스를 중복해서 등록했거나 실제로 중복 결제 중일 수 있어요. 합치면 매달 ${monthly.toLocaleString("ko-KR")}원이에요.`,
       targets: targetsOf(list.slice(0, 1)),
@@ -118,6 +121,7 @@ export function findOverlaps(active: Sub[], rate: number = USD_KRW_RATE): Overla
     const monthly = ott.reduce((sum, s) => sum + monthlyAmount(s, rate), 0);
     hints.push({
       key: "ott",
+      category: "ott",
       title: `영상·음악 구독이 ${ott.length}개예요`,
       detail: `매달 ${monthly.toLocaleString("ko-KR")}원이에요. 최근 한 달 동안 안 본 서비스가 있다면 하나씩 쉬어 가는 것도 방법이에요.`,
       targets: targetsOf(ott),
@@ -129,6 +133,7 @@ export function findOverlaps(active: Sub[], rate: number = USD_KRW_RATE): Overla
     const monthly = ai.reduce((sum, s) => sum + monthlyAmount(s, rate), 0);
     hints.push({
       key: "ai",
+      category: "ai",
       title: `AI 도구 구독이 ${ai.length}개예요`,
       detail: `매달 ${monthly.toLocaleString("ko-KR")}원이에요. 기능이 겹치면 주로 쓰는 하나만 남겨도 충분할 수 있어요.`,
       targets: targetsOf(ai),
@@ -140,6 +145,7 @@ export function findOverlaps(active: Sub[], rate: number = USD_KRW_RATE): Overla
   if (wow.length > 0 && plus.length > 0) {
     hints.push({
       key: "membership",
+      category: "membership",
       title: "쿠팡 와우와 네이버플러스를 함께 쓰고 있어요",
       detail: "두 멤버십은 배송과 적립 혜택이 비슷해요. 자주 이용하는 쪽만 유지해도 되는지 확인해 보세요.",
       targets: targetsOf([wow[0], plus[0]]),

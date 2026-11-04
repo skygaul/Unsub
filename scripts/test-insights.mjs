@@ -52,6 +52,22 @@ assert.equal(h1.length, 1);
 assert.equal(h1[0].key, "ott");
 assert.equal(h1[0].targets.length, 3);
 
+// 안내가 붙는 분류: 영상·음악 → ott, AI → ai, 멤버십 → membership, 중복 등록 → 그 서비스의 분류
+assert.equal(h0[0].category, "ott");
+assert.equal(findOverlaps([sub("ChatGPT", "chatgpt", 28000), sub("Claude", "claude", 28000)])[0].category, "ai");
+assert.equal(
+  findOverlaps([sub("와우", "coupang_wow", 7890), sub("네이버플러스", "naver_plus", 4900)])[0].category,
+  "membership",
+);
+assert.equal(
+  findOverlaps([sub("노션", "notion", 8000), sub("노션 팀", "notion", 8000)])[0].category,
+  "work",
+);
+// 모든 안내의 분류는 분류별 막대(categoryBreakdown)에 실제로 있어야 화면에 보인다
+const mixed = [...ott3, sub("ChatGPT", "chatgpt", 28000), sub("Claude", "claude", 28000), sub("직접", null, 1000)];
+const shown = new Set(categoryBreakdown(mixed).map((r) => r.id));
+for (const h of findOverlaps(mixed)) assert.ok(shown.has(h.category), h.key);
+
 // 달러 구독은 환산해서 분류별 합계에 들어간다 (Claude $20 = 28,000원)
 const usd = categoryBreakdown([sub("Claude", "claude", 20, "monthly", "USD"), sub("넷플릭스", "netflix", 28000)]);
 assert.equal(usd.find((r) => r.id === "ai").monthly, 28000);

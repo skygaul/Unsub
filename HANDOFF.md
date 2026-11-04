@@ -220,7 +220,7 @@ first-service/
 | `/calendar` | 화면 (v0.3, 2026-11-04) | 결제 달력(`?month=YYYY-MM`). 이용 중이고 다음 결제일이 있는 구독만 표시. 계산은 `src/lib/billing-calendar.ts`, 시험은 `node scripts/test-billing-calendar.mjs`. `src/lib/supabase/proxy.ts`의 보호 경로에 추가됨 |
 | 대시보드 변경 (v0.3) | 화면 | 구독 카드에 `CancelToggleButton`("해지 완료" ↔ "이용 중으로 되돌리기", 기존 PATCH API로 `status`만 변경), 해지함이 있으면 "해지해서 아끼는 돈(매달·1년)" 카드. **DB 변경 없음** |
 
-| 대시보드 분석 (v0.4, 2026-11-04) | 화면 | `DashboardInsights` 컴포넌트: "정리해 볼까요?" 안내 카드, 분류별 비중 막대, 가장 비싼 구독 3개, 1년 총액. 계산은 `src/lib/insights.ts`(분류 표 `SERVICE_CATEGORY`, 규칙 `findOverlaps`), 시험은 `node scripts/test-insights.mjs`. **새 서비스를 `cancel-guides.json`에 추가하면 `SERVICE_CATEGORY`에도 넣어야 함**(없으면 "기타"). DB 변경 없음 |
+| 대시보드 분석 (v0.4, 2026-11-04) | 화면 | `DashboardInsights` 컴포넌트 하나에 1년 총액, 분류별 비중 막대, **막대 아래에 붙는 "정리해 볼까요?" 안내(`OverlapHint.category`로 분류에 연결, v0.4.1에서 별도 카드를 합침)**, 가장 비싼 구독 3개. 계산은 `src/lib/insights.ts`(분류 표 `SERVICE_CATEGORY`, 규칙 `findOverlaps`), 시험은 `node scripts/test-insights.mjs`. **새 서비스를 `cancel-guides.json`에 추가하면 `SERVICE_CATEGORY`에도 넣어야 함**(없으면 "기타"). DB 변경 없음 |
 
 | 달러 결제 (v0.5, 2026-11-04) | DB·API·화면 | `subscriptions.currency`(KRW\|USD) 추가, `amount`는 `numeric(12,2)`. 환산은 **실제 환율**: `src/lib/exchange-rate.ts`의 `getUsdKrwRate()`(Frankfurter → ExchangeRate-API → 기본값 `USD_KRW_RATE`=1,400, 1시간 캐시, 3초 제한시간, 500~3000 범위 밖 값은 버림)가 대시보드·달력 서버 페이지에서 구독 조회와 동시에 호출되고, `toKrw`·`monthlyAmount`·`monthlySavings`·`monthTotal`·인사이트 함수에 `rate`로 전달됨. 표시는 `formatMoney`, `describeRate`. 시험 `node scripts/test-exchange-rate.mjs`(실제 호출 1회). 검증은 `validation.ts`(원화 정수, 달러 소수 둘째 자리·10만 달러 이하), 문자 파서는 `rule-parser.ts`(`parseUsdAmounts`)와 `parse-payment.ts`(스키마에 `currency`). 시험: `node scripts/test-validation.mjs`, `test-rule-parser.mjs`(16건) |
 
