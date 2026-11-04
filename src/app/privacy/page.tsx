@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "구독 해지 도우미가 어떤 정보를 어떻게 다루는지 안내해요.",
 };
 
-const UPDATED = "2026-11-03";
+const UPDATED = "2026-11-04";
 
 export default function PrivacyPage() {
   return (
@@ -30,13 +30,19 @@ export default function PrivacyPage() {
             비밀번호는 받지 않아요.
           </li>
           <li>
-            <b>사용자가 직접 입력한 구독 정보</b>: 서비스 이름, 결제 금액, 결제 주기, 다음 결제일,
-            결제 경로, 메모.
+            <b>사용자가 직접 입력한 구독 정보</b>: 서비스 이름, 결제 금액과 통화(원 또는 달러),
+            결제 주기, 다음 결제일, 결제 경로, 메모.
           </li>
           <li>
             <b>결제 문자 분석용 텍스트</b>: &quot;결제 문자로 자동 입력&quot;에 붙여넣은 내용. 분석에만
-            쓰고 <b>저장하지 않아요.</b> 분석 결과(서비스, 금액, 주기, 결제일)만 사용자가 확인한 뒤
-            저장돼요.
+            쓰고 <b>저장하지 않아요.</b> 분석 결과(서비스, 금액, 통화, 주기, 결제일)만 사용자가
+            확인한 뒤 저장돼요.
+          </li>
+          <li>
+            <b>쿠키</b>: 로그인 상태를 유지하는 로그인 세션 쿠키와, 자동 로그아웃을 위한{" "}
+            <b>마지막 활동 시각 쿠키</b>(<code>last_active</code>). 마지막 활동 시각 쿠키에는
+            시각을 나타내는 숫자만 들어 있고 개인정보는 없어요. 로그인해 있는 동안에만 쓰이고
+            로그아웃하거나 자동 로그아웃되면 지워져요. 광고나 추적에는 쓰지 않아요.
           </li>
         </ul>
         <p className="mt-2 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
@@ -49,8 +55,10 @@ export default function PrivacyPage() {
         <h2 className="text-lg font-semibold">2. 이용 목적</h2>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
           <li>로그인과 본인 확인, 사용자별 구독 목록 제공</li>
-          <li>한 달 구독료 계산, 결제 예정일 표시</li>
+          <li>한 달 구독료 계산, 결제 예정일과 결제 달력 표시, 구독 분석(분류별 비중 등)</li>
+          <li>달러 결제 금액을 그날의 환율로 원화로 환산해 합계에 반영</li>
           <li>결제 문자에서 구독 정보를 추출해 입력을 돕는 기능</li>
+          <li>10분 동안 활동이 없으면 자동으로 로그아웃해 계정을 보호</li>
         </ul>
         <p className="mt-2 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
           광고나 마케팅에 쓰지 않고, 제3자에게 판매하지 않아요.
@@ -80,10 +88,16 @@ export default function PrivacyPage() {
                 <td className="py-2 pr-4">Vercel</td>
                 <td className="py-2">웹사이트 호스팅</td>
               </tr>
-              <tr>
+              <tr className="border-b border-zinc-100 dark:border-zinc-900">
                 <td className="py-2 pr-4">Anthropic (Claude API)</td>
                 <td className="py-2">
                   규칙으로 읽기 어려운 결제 문자 텍스트의 분석. 숫자를 가린 텍스트만 전달돼요.
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">Frankfurter, ExchangeRate-API</td>
+                <td className="py-2">
+                  원/달러 환율 조회. 환율만 가져오고 사용자 정보는 전달하지 않아요.
                 </td>
               </tr>
             </tbody>
