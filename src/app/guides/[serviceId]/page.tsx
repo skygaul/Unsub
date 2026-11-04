@@ -20,6 +20,7 @@ const KEY_LABELS: Record<string, string> = {
   other_channels: "다른 경로로 가입한 경우",
   third_party: "제3자(스토어 등)를 통한 결제",
   immediate: "즉시 종료",
+  annual: "연간 이용권",
   note: "참고",
   restrictions: "제한 사항",
   deadline: "기한",
@@ -31,7 +32,7 @@ const KEY_LABELS: Record<string, string> = {
 
 const CHANNEL_TABS = [
   { id: "all", label: "전체", keys: null },
-  { id: "direct", label: "직접 결제", keys: ["direct", "web", "immediate", "restrictions", "deadline", "business", "cannot_sign_in", "workspace"] },
+  { id: "direct", label: "직접 결제", keys: ["direct", "web", "immediate", "annual", "restrictions", "deadline", "business", "cannot_sign_in", "workspace"] },
   { id: "apple", label: "Apple", keys: ["apple", "ios", "store", "third_party", "other_channels"] },
   { id: "google_play", label: "Google Play", keys: ["google_play", "google_play_store", "android", "store", "third_party", "other_channels"] },
   { id: "carrier", label: "통신사·제휴", keys: ["carrier", "partners", "partner", "other_channels", "double"] },
@@ -127,14 +128,14 @@ export default async function GuideDetailPage(
       {service.after_cancel && (
         <section className="mt-8">
           <h2 className="text-lg font-semibold">해지하면 어떻게 되나요?</h2>
-          <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{service.after_cancel}</p>
+          <p className="mt-2 whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">{service.after_cancel}</p>
         </section>
       )}
 
       {service.refund && (
         <section className="mt-8">
           <h2 className="text-lg font-semibold">환불 규정</h2>
-          <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{service.refund}</p>
+          <p className="mt-2 whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">{service.refund}</p>
         </section>
       )}
 

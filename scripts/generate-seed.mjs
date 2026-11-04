@@ -27,7 +27,12 @@ const rows = src.services.map((s) => {
   const notes = [s.notes, s.corrections, s.verification.includes("(") ? s.verification : null]
     .filter(Boolean)
     .join(" / ");
-  return `(${pgText(s.id)}, ${pgText(s.name)}, ${pgJson(s.channels ?? [])}, ${pgJson(s.cancel ?? {})}, ${pgText(s.after_cancel)}, ${pgText(s.refund)}, ${pgJson(warnings)}, ${pgText(notes || null)}, ${pgText(s.contact)}, ${pgJson(s.sources ?? [])}, ${pgText(verification)}, '${lastVerified}')`;
+  // 서비스별 확인일(last_verified)이 있으면 그것을, 없으면 meta의 날짜를 쓴다
+  const verifiedOn = s.last_verified ?? lastVerified;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(verifiedOn)) {
+    throw new Error(`${s.id}: last_verified는 YYYY-MM-DD 형식이어야 합니다 (${verifiedOn})`);
+  }
+  return `(${pgText(s.id)}, ${pgText(s.name)}, ${pgJson(s.channels ?? [])}, ${pgJson(s.cancel ?? {})}, ${pgText(s.after_cancel)}, ${pgText(s.refund)}, ${pgJson(warnings)}, ${pgText(notes || null)}, ${pgText(s.contact)}, ${pgJson(s.sources ?? [])}, ${pgText(verification)}, '${verifiedOn}')`;
 });
 
 const sql = `-- 자동 생성 파일. cancel-guides.json을 수정한 뒤 scripts/generate-seed.mjs로 다시 만드세요.

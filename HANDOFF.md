@@ -203,22 +203,25 @@ first-service/
 ### 신뢰도 수준 (`verification`)
 | 값 | 의미 | 해당 서비스 |
 |---|---|---|
-| `page_read` | 공식 도움말 본문을 직접 열어 대조 | 넷플릭스, 유튜브 프리미엄, ChatGPT, Claude, 제미나이, 디즈니+(구 정책) |
+| `page_read` | 공식 도움말 본문을 직접 열어 대조 | 넷플릭스, 유튜브 프리미엄, ChatGPT, Claude, 제미나이, 디즈니+(구 정책), **네이버플러스(2026-11-04, 아래 참고)** |
 | `official_search` | 공식 도메인 검색 요약으로 확인, 본문 미열람 | 쿠팡 와우, 티빙, 웨이브 |
 | `partial` | 일부만 공식 확인 | 노션 (환불은 공식, 해지 경로는 블로그) |
-| `blog_only` | 블로그·기사 기준 | 네이버플러스 |
+| `blog_only` | 블로그·기사 기준 | (현재 없음) |
+
+**네이버플러스 갱신 (2026-11-04)**: 에이전트는 `help.naver.com`에 접속할 수 없어(브라우저·웹 읽기 도구 모두 차단), **사용자가 공식 도움말(https://help.naver.com/service/23168/bookmark/20281?osType=COMMONOS) 본문을 복사해 제공한 내용**으로 `cancel-guides.json`의 `naver_plus`를 다시 썼음(정기결제 해지·즉시 종료 경로, 월간·연간 이용권별 환불 규칙, 청약철회 100%/90%, 결제수단별 환불 시점, 주의사항 6개). 블로그 기반 옛 내용은 제거. 이 항목은 서비스별 `last_verified: "2026-11-04"`를 가지며, **다른 서비스는 meta 날짜(2026-11-03)를 그대로 씀**(`scripts/generate-seed.mjs`가 서비스별 `last_verified`를 우선 사용). **DB 반영은 `supabase/seed.sql`을 Supabase SQL Editor에서 실행해야 함.**
 
 실제 계정 화면에서 클릭해 확인한 항목은 **0건**.
 
 ### 알려진 문제
 1. **디즈니+ 환불 규정**: 읽은 페이지가 `[이전]` 정책(2025-05-16 시행)임. 개정 정책(신규 2026-05-08, 기존 회원 2026-06-12 적용)의 본문은 읽지 못함 → 환불 내용이 달라졌을 수 있음
-2. **네이버플러스**: 네이버 도메인이 검색 도구에서 접근 불가라 공식 확인을 못 함
+2. ~~**네이버플러스**: 공식 확인 못 함~~ **해결(2026-11-04)**: 공식 도움말 본문(사용자 제공)으로 갱신. 단 에이전트가 직접 열어 본 것은 아니고, 실제 계정 화면 클릭 확인은 0건
 3. **쿠팡·티빙·웨이브**: 검색 요약 기반이라 공식 본문과 미세하게 다를 수 있음
 4. **제미나이**: Android·iOS 경로는 검색 요약 기준
 5. 정책은 바뀜. 화면에 `last_verified`를 반드시 표시할 것
 
 ### 데이터 수정 절차
 1. `cancel-guides.json` 수정 → 2. `node scripts/generate-seed.mjs`로 `supabase/seed.sql` 재생성 → 3. Supabase SQL Editor에서 seed.sql 실행(`on conflict do update`라 재실행 가능) → 4. 커밋·푸시
+- 서비스 한 개만 고쳤을 때는 그 서비스에 `"last_verified": "YYYY-MM-DD"`를 넣으면 그 서비스의 확인일만 바뀜(없으면 meta 날짜). `refund`·`after_cancel` 문자열의 `\n`은 화면에서 줄바꿈으로 표시됨
 - 새 서비스를 추가하면 **세 곳에 더** 넣을 것: `src/lib/rule-parser.ts`의 `SERVICE_PATTERNS`(문자 인식 별칭), `src/lib/insights.ts`의 `SERVICE_CATEGORY`(분류, 없으면 "기타"), 가이드 상세의 `KEY_LABELS`·`CHANNEL_TABS`(새 `cancel` 키를 썼다면, 없으면 "공통"으로 항상 표시됨)
 
 ---
