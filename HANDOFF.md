@@ -128,7 +128,7 @@ first-service/
 
 ### DB 스키마 요약 (`supabase/schema.sql`)
 - `services`: id(text PK), name, channels, cancel, after_cancel, refund, warnings, notes, contact, sources, verification(`page_read|official_search|partial|blog_only`), last_verified. 읽기 전용
-- `subscriptions`: id, user_id(`default auth.uid()`), service_id, name, **amount `numeric(12,2)`**, **currency(`KRW|USD`, 기본 KRW)**, billing_cycle, next_billing_date, payment_channel(`direct|apple|google_play|carrier|unknown`), status(`active|cancelled`), memo, created_at. RLS: 본인만 CRUD
+- `subscriptions`: id, user_id(`default auth.uid()`), service_id, name, **amount `numeric(12,2)`**, **currency(`KRW|USD`, 기본 KRW)**, billing_cycle, next_billing_date, payment_channel(`direct|apple|google_play|carrier|unknown`), **payment_method(`card|bank|simple_pay|mobile|points|other|unknown`, 기본 unknown)**, status(`active|cancelled`), memo, created_at. RLS: 본인만 CRUD
 - `complaint_drafts`: id, user_id, subscription_id, content, created_at. RLS: 본인만. **화면·API는 아직 없음(P1)**
 
 ### API
@@ -156,6 +156,7 @@ first-service/
 | v0.8 | 보안 헤더·기본 CSP(`next.config.ts`), API 호출 제한 확대(`lib/rate-limit.ts`), Dependabot(`.github/dependabot.yml`) | `772932b` 푸시·배포됨. 아래 "v0.8" 참고 |
 | v0.9 | `npm test`로 시험 통합, GitHub Actions CI(린트·시험·빌드), Dependabot에 Actions 추가 | 푸시됨. 위 "v0.9" 참고 |
 | v0.10 | 해지 가이드(공개 데이터) 5분 캐시: `lib/supabase/public.ts`, 7곳 전환 | `4350e2f` 푸시·배포됨. 아래 "v0.10" 참고 |
+| v0.11 | "무엇으로 결제했나요?"(결제 수단) 추가: `payment_method` 컬럼, 폼·카드 표시·문자 자동 입력 | 미푸시. **SQL 먼저**. 아래 "v0.11" 참고 |
 
 ### v0.6 자동 로그아웃 (푸시·배포됨, 운영 동작 확인 전)
 - **동작**: 로그인한 채 **10분** 활동이 없으면 로그아웃, **만료 1분 전에 "곧 로그아웃돼요, 계속 사용하시겠어요?" 안내**(계속 사용 / 지금 로그아웃). 로그아웃되면 홈에 "자동으로 로그아웃됐어요" 안내
@@ -183,6 +184,15 @@ first-service/
 - **호출 제한** (`src/lib/rate-limit.ts`의 `LIMITS`): 조회 `read` 분당 120회, 생성·수정·삭제 `write` 분당 60회, 문자 분석 `parse` 분당 8회, 사용자별. 한도를 넘으면 `429` + `Retry-After`(`enforceRateLimit()`, `lib/api.ts`). 서버 메모리 기준이라 서버가 여러 개면 인스턴스마다 따로 셈. 기록이 2000개를 넘으면 오래된 사용자 기록을 정리함. **로그인하지 않은 요청의 제한은 없음**(401을 돌려줄 뿐)
 - **Dependabot** (`.github/dependabot.yml`): npm 의존성을 매주 월요일(KST) PR로 제안, 마이너·패치는 한 PR로 묶고 메이저는 개별 PR, 열린 PR 최대 5개. **GitHub 저장소 Settings > Code security에서 Dependabot alerts·security updates를 켜는 것은 사용자가 직접 해야 함**. PR은 main에 병합하기 전까지 운영에 반영되지 않음(병합하면 자동 배포되므로 `npm run build`와 시험 확인 후 병합)
 - **검증**: 운영 빌드를 띄워 응답 헤더 확인, 브라우저에서 같은 출처 요청 통과·외부 주소 요청은 CSP가 차단·Supabase 주소 요청 통과·화면 정상 동작·콘솔에는 일부러 낸 위반만 있음을 확인함. 호출 제한은 시험(`test-rate-limit.mjs`)으로만 확인했고 **실제 로그인 상태에서 429가 나는 것은 확인 전**. **2026-11-04 사용자가 로컬 운영 빌드(`npm run build && npm start`)에서 구글 로그인, 구독 추가·수정·삭제, 결제 문자 자동 입력, 결제 달력이 정상이고 콘솔에 CSP 위반이 없음을 확인함. GitHub의 Dependabot alerts·security updates도 사용자가 켬.** **배포된 운영 사이트(`unsub-unsub1.vercel.app`)에서도 사용자가 Google 로그인, 구독 추가, 결제 문자 자동 입력이 정상이고 콘솔에 CSP 위반이 없음을 확인함(2026-11-04).** 호출 제한의 429는 운영에서도 확인 기록 없음(시험 스크립트로만 확인)
+
+### v0.11 결제 수단 "무엇으로 결제했나요?" (코드 완료, 미푸시)
+- **구분**: `payment_channel`(어디서: 직접 결제·Apple·Google Play·통신사, 해지 경로를 정함)과 `payment_method`(무엇으로: 카드·계좌이체·간편결제·휴대폰 소액결제·포인트·상품권·기타·잘 모르겠어요, 기본 `unknown`)는 별개. 값은 `src/lib/types.ts`의 `PAYMENT_METHODS`/`PAYMENT_METHOD_LABELS`. 신용·체크카드는 문자에 신용인지 체크인지 안 나오는 경우가 많아 **하나(`card`)로 묶음**
+- **DB**: `supabase/migration-v0.11-payment-method.sql`(`schema.sql`에도 반영). **푸시 전에 Supabase SQL Editor에서 먼저 실행**해야 함(안 하면 구독 저장이 실패). 기존 구독은 모두 `unknown`, 다시 실행해도 안전, 기존 앱 코드도 계속 동작
+- **화면**: `SubscriptionForm`에서 "어디서 결제했나요?" 옆에 "무엇으로 결제했나요?"를 나란히 배치(`sm` 이상에서 2열, 좁은 화면은 위아래). 대시보드 카드는 `… · 서비스에 직접 결제 · 신용·체크카드`처럼 표시하고 `unknown`이면 숨김(컬럼이 없는 옛 DB에서도 깨지지 않게 값이 있을 때만 표시)
+- **문자 자동 입력**: 규칙 파서(`rule-parser.ts`의 `METHOD_PATTERNS`, 위에서부터 먼저 맞는 것: 간편결제 > 휴대폰 소액결제 > 포인트·상품권 > 계좌이체 > 카드. "네이버페이로 삼성카드 결제"는 간편결제), Claude(스키마 `payment_method` enum, 프롬프트는 **근거가 있을 때만, 없으면 `unknown`, 카드번호로 카드사 추측 금지**). **폼 자동 채움 규칙(`src/lib/form-autofill.ts`의 `applyParsed`, 컴포넌트에서 분리해 시험함)**: 같은 폼에서 문자를 여러 번 분석할 때 새 문자에 없는 정보(결제 수단·결제일·주기 등)가 이전 문자의 값으로 남지 않도록, **이전 분석이 채웠고 그 뒤로 사용자가 고치지 않은 칸은 처음 값으로 되돌린 뒤** 새 결과를 채움. 사용자가 직접 고른/쓴 값은 지우지 않음(분석이 읽은 값이 있으면 덮어쓰는 기존 동작은 유지). 폼의 `autoFilled` ref가 "분석이 채운 칸"을 기억하고 각 칸의 수동 입력 핸들러가 `edited()`로 그 칸을 뺌. 이 문제는 처음 구현(v0.11)에서 "모르면 기존 값 유지"로 만들어 사용자가 발견했고(카드 문자 다음에 수단이 없는 문자를 분석해도 카드가 남음, 결제일·주기·서비스·이름·금액도 같은 문제) 고침 새 카드사·간편결제 이름은 `METHOD_PATTERNS`에 추가
+- **개인정보**: 카드번호·계좌번호는 받지 않고 종류만 저장. 개인정보처리방침(`/privacy`)의 수집 항목에 "결제 수단의 종류"를 추가함
+- **검증**: `test-form-autofill`(첫 분석, 이어서 분석, 직접 고른 값 보존, 직접 쓴 값 보존, 달러→원화 전환 등), `test-rule-parser` 23건(결제 수단 케이스 7개 추가), `test-validation`(기본값·허용값·PATCH), 실제 Claude 호출(`npm run test:ai`)에서 "[국민카드] 승인…"은 `card`, 근거 없는 문자는 `unknown`
+- **미확인**: 로그인한 실제 화면에서 두 선택 칸의 나란한 배치, 저장 후 대시보드 표시, 운영 사이트 동작
 
 ### v0.10 해지 가이드 캐시 (푸시·배포됨, 운영 공개 페이지 확인됨)
 - **구조**: `src/lib/supabase/public.ts`의 `createPublicClient()`는 쿠키를 읽지 않는 anon 클라이언트이고, 모든 Supabase 요청이 `cachedFetch`를 거쳐 `next: { revalidate }`(Next.js 요청 캐시, Vercel에서는 서버 전체가 공유)를 갖게 함. 쿠키가 없어 응답이 사용자마다 달라지지 않으므로 캐시가 안전함. **공개 데이터(`services`)에만 쓸 것. 구독 같은 사용자 데이터는 반드시 `lib/supabase/server.ts`의 `createClient()`로 읽을 것**(이 파일 주석에도 경고함)
@@ -230,6 +240,7 @@ first-service/
 | `test-auth-cookie` | Supabase 로그인 쿠키 판별(분할 쿠키, code-verifier 제외) |
 | `test-rate-limit` | 호출 제한 한도·차단·재시도 시간·기록 정리 |
 | `test-public-client` | 해지 가이드 캐시 시간 해석, `cachedFetch` 동작 |
+| `test-form-autofill` | 문자 분석 결과를 폼에 채우는 규칙(이전 분석 값 되돌리기, 직접 고른 값 보존) |
 | `test-ai-parse` | **실제 Claude 호출**(비용 발생, 1센트 이하). 규칙 파서가 처리하지 못하는 문자만 호출 |
 
 ---

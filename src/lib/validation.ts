@@ -2,10 +2,12 @@ import {
   BILLING_CYCLES,
   CURRENCIES,
   PAYMENT_CHANNELS,
+  PAYMENT_METHODS,
   STATUSES,
   type BillingCycle,
   type Currency,
   type PaymentChannel,
+  type PaymentMethod,
   type Status,
 } from "@/lib/types";
 
@@ -16,6 +18,7 @@ export type SubscriptionInput = {
   billing_cycle: BillingCycle;
   next_billing_date: string | null;
   payment_channel: PaymentChannel;
+  payment_method: PaymentMethod;
   status: Status;
   memo: string | null;
   service_id: string | null;
@@ -109,6 +112,15 @@ export function parseSubscriptionInput(body: unknown, partial: boolean): Result 
     out.payment_channel = b.payment_channel as PaymentChannel;
   } else if (!partial) {
     out.payment_channel = "unknown";
+  }
+
+  if (has("payment_method")) {
+    if (!PAYMENT_METHODS.includes(b.payment_method as PaymentMethod)) {
+      return { ok: false, error: "결제 수단이 올바르지 않아요." };
+    }
+    out.payment_method = b.payment_method as PaymentMethod;
+  } else if (!partial) {
+    out.payment_method = "unknown";
   }
 
   if (has("status")) {

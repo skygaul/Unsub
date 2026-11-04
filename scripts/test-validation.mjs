@@ -35,4 +35,17 @@ assert.equal(ok({ amount: 12000 }, true).amount, 12000);
 bad({ amount: 12.5 }, true);
 assert.equal(ok({ amount: 12.5, currency: "USD" }, true).amount, 12.5);
 
+// 결제 수단: 안 보내면 'unknown', 허용된 값만 받는다
+assert.equal(ok({ ...base, amount: 17000 }).payment_method, "unknown");
+for (const m of ["card", "bank", "simple_pay", "mobile", "points", "other", "unknown"]) {
+  assert.equal(ok({ ...base, amount: 17000, payment_method: m }).payment_method, m);
+}
+bad({ ...base, amount: 17000, payment_method: "bitcoin" });
+bad({ ...base, amount: 17000, payment_method: "" });
+bad({ ...base, amount: 17000, payment_method: 5 });
+// 수정(PATCH)에서는 보낸 필드만 검사한다
+assert.equal(ok({ payment_method: "card" }, true).payment_method, "card");
+assert.equal(ok({ status: "cancelled" }, true).payment_method, undefined);
+bad({ payment_method: "x" }, true);
+
 console.log("입력 검증 시험 통과");

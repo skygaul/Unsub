@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import type { ParsedPayment } from "@/lib/rule-parser";
-import { todayKst } from "@/lib/types";
+import { PAYMENT_METHODS, todayKst } from "@/lib/types";
 
 export type { ParsedPayment };
 
@@ -40,6 +40,7 @@ function buildSchema(serviceIds: string[]) {
     billing_cycle: z.enum(["monthly", "yearly"]).nullable(),
     next_billing_date: z.string().nullable(),
     payment_channel: z.enum(["direct", "apple", "google_play", "carrier", "unknown"]),
+    payment_method: z.enum(PAYMENT_METHODS),
     notes: z.string().nullable(),
   });
 }
@@ -60,6 +61,7 @@ function buildSystemPrompt(serviceIds: string[]) {
 - billing_cycle: 문장에 월/매월/monthly면 "monthly", 연/연간/1년/yearly면 "yearly". 근거가 없으면 null.
 - next_billing_date: 다음 결제일이 문장에 직접 있을 때만 YYYY-MM-DD로. 연도가 없으면 오늘 이후 가장 가까운 날짜로 추정. 근거가 없으면 null. 결제일 자체를 다음 결제일로 착각하지 말 것.
 - payment_channel: "App Store", "Apple", "iTunes"가 보이면 "apple". "Google Play"면 "google_play". 통신사 소액결제·휴대폰결제면 "carrier". 서비스 이름과 카드사만 보이면 "direct". 단서가 없으면 "unknown".
+- payment_method: 무엇으로 결제했는지, 문장에 근거가 있을 때만. 카드사 이름·신용카드·체크카드·Visa·Mastercard 등이면 "card", 네이버페이·카카오페이·토스페이·삼성페이·Apple Pay·Google Pay 같은 간편결제면 "simple_pay"(카드로 간편결제를 했다면 "simple_pay"), 계좌이체·자동이체·계좌 출금이면 "bank", 휴대폰 소액결제·통신사 결제면 "mobile", 포인트·상품권·기프트카드면 "points", 그 밖에 근거가 있는 다른 수단이면 "other". 근거가 없으면 반드시 "unknown". 가려진 숫자나 카드번호의 앞자리로 카드사를 추측하지 말 것.
 - notes: 사용자가 확인해야 할 점을 한 문장으로(예: "외화 결제라 금액을 알 수 없어요"). 없으면 null.
 
 추측으로 값을 만들지 말고, 근거가 없으면 null을 쓰세요.`;

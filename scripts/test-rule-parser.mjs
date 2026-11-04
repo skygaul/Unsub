@@ -14,11 +14,12 @@ const TODAY = "2026-11-03";
 const cases = [
   {
     text: "[Web발신] 삼성카드 승인 넷플릭스 17,000원 일시불",
-    expect: { complete: true, service_id: "netflix", amount: 17000, payment_channel: "direct" },
+    expect: { complete: true, service_id: "netflix", amount: 17000, payment_channel: "direct", payment_method: "card" },
   },
   {
     text: "[Apple] App Store 구독 영수증 ChatGPT Plus 29,000원 매월 자동 갱신",
-    expect: { complete: true, service_id: "chatgpt", amount: 29000, payment_channel: "apple", billing_cycle: "monthly" },
+    // 결제 수단에 대한 단서가 문자에 없으면 추측하지 않는다
+    expect: { complete: true, service_id: "chatgpt", amount: 29000, payment_channel: "apple", billing_cycle: "monthly", payment_method: "unknown" },
   },
   {
     text: "Google Play 결제 완료: 유튜브 프리미엄 14,900원. 다음 결제일 11/25",
@@ -76,7 +77,38 @@ const cases = [
   },
   {
     text: "제미나이 Google AI Pro 19,500원 휴대폰결제",
-    expect: { complete: true, service_id: "gemini", amount: 19500, payment_channel: "carrier" },
+    expect: { complete: true, service_id: "gemini", amount: 19500, payment_channel: "carrier", payment_method: "mobile" },
+  },
+  // ---- 결제 수단 인식
+  {
+    // 간편결제와 카드가 함께 나오면 실제로 결제한 방식인 간편결제를 우선한다
+    text: "네이버페이로 삼성카드 결제 넷플릭스 17,000원",
+    expect: { complete: true, service_id: "netflix", amount: 17000, payment_method: "simple_pay" },
+  },
+  {
+    text: "[신한카드] 티빙 14,900원 승인",
+    expect: { complete: true, service_id: "tving", amount: 14900, payment_method: "card" },
+  },
+  {
+    text: "웨이브 10,900원 자동이체 출금 완료",
+    expect: { complete: true, service_id: "wavve", amount: 10900, payment_method: "bank" },
+  },
+  {
+    text: "넷플릭스 17,000원 포인트 결제",
+    expect: { complete: true, service_id: "netflix", amount: 17000, payment_method: "points" },
+  },
+  {
+    text: "넷플릭스 17,000원 카카오페이 결제",
+    expect: { complete: true, service_id: "netflix", amount: 17000, payment_method: "simple_pay" },
+  },
+  {
+    // 근거가 없으면 비워 둔다
+    text: "티빙 14,900원 결제",
+    expect: { complete: true, service_id: "tving", amount: 14900, payment_method: "unknown" },
+  },
+  {
+    text: "Notion 연간 구독 $96.00 갱신 완료. 결제 수단 Visa [숫자 가림]",
+    expect: { complete: true, service_id: "notion", amount: 96, currency: "USD", payment_method: "card" },
   },
 ];
 

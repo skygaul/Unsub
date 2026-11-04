@@ -30,6 +30,8 @@ create table if not exists public.subscriptions (
   next_billing_date date,
   payment_channel   text not null default 'unknown'
                     check (payment_channel in ('direct', 'apple', 'google_play', 'carrier', 'unknown')),
+  payment_method    text not null default 'unknown'
+                    check (payment_method in ('card', 'bank', 'simple_pay', 'mobile', 'points', 'other', 'unknown')),
   status            text not null default 'active' check (status in ('active', 'cancelled')),
   memo              text check (memo is null or char_length(memo) <= 500),
   created_at        timestamptz not null default now()

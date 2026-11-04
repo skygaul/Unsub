@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { applyParsed, type AutoField } from "@/lib/form-autofill";
 import {
   BILLING_CYCLES,
   BILLING_CYCLE_LABELS,
@@ -10,7 +11,10 @@ import {
   CURRENCY_LABELS,
   PAYMENT_CHANNELS,
   PAYMENT_CHANNEL_LABELS,
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
   type Currency,
+  type PaymentMethod,
   type Subscription,
 } from "@/lib/types";
 
@@ -37,11 +41,20 @@ export default function SubscriptionForm({ services, initial }: Props) {
   const [cycle, setCycle] = useState(initial?.billing_cycle ?? "monthly");
   const [nextDate, setNextDate] = useState(initial?.next_billing_date ?? "");
   const [channel, setChannel] = useState(initial?.payment_channel ?? "unknown");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    initial?.payment_method ?? "unknown",
+  );
   const [status, setStatus] = useState(initial?.status ?? "active");
   const [memo, setMemo] = useState(initial?.memo ?? "");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const autoFilled = useRef<Set<AutoField>>(new Set());
+  /** 사용자가 직접 고친 칸은 "분석이 채운 칸"에서 뺀다 */
+  const edited = (field: AutoField) => {
+    autoFilled.current.delete(field);
+  };
 
   // 결제 문자 자동 입력 (추가 모드에서만 사용)
   const [smsText, setSmsText] = useState("");
@@ -82,20 +95,26 @@ export default function SubscriptionForm({ services, initial }: Props) {
         billing_cycle: "monthly" | "yearly" | null;
         next_billing_date: string | null;
         payment_channel: typeof channel;
+        payment_method?: PaymentMethod;
         notes: string | null;
       };
 
-      if (d.service_id && services.some((s) => s.id === d.service_id)) {
-        setServiceId(d.service_id);
-      }
-      if (d.service_name) setName(d.service_name);
-      if (d.amount !== null) {
-        setAmount(String(d.amount));
-        if (d.currency === "USD" || d.currency === "KRW") setCurrency(d.currency);
-      }
-      if (d.billing_cycle) setCycle(d.billing_cycle);
-      if (d.next_billing_date) setNextDate(d.next_billing_date);
+      // 이전 분석이 채웠고 아직 아무도 고치지 않은 칸은 되돌린 뒤 새 결과를 채운다(규칙은 lib/form-autofill.ts).
+      const { values, filled } = applyParsed(
+        { serviceId, name, amount, currency, cycle, nextDate, paymentMethod },
+        autoFilled.current,
+        d,
+        services.map((s) => s.id),
+      );
+      setServiceId(values.serviceId);
+      setName(values.name);
+      setAmount(values.amount);
+      setCurrency(values.currency);
+      setCycle(values.cycle);
+      setNextDate(values.nextDate);
+      setPaymentMethod(values.paymentMethod);
       setChannel(d.payment_channel);
+      autoFilled.current = filled;
 
       const notes: string[] = [];
       if (!d.is_subscription_payment) notes.push("구독 결제 문자가 아닌 것 같아요.");
@@ -125,6 +144,7 @@ export default function SubscriptionForm({ services, initial }: Props) {
   }
 
   function onServiceChange(id: string) {
+    edited("service");
     setServiceId(id);
     const picked = services.find((s) => s.id === id);
     // 가이드가 있는 서비스를 고르면 이름을 채워 준다 (직접 고친 이름은 덮어쓰지 않는다)
@@ -168,6 +188,7 @@ export default function SubscriptionForm({ services, initial }: Props) {
             billing_cycle: cycle,
             next_billing_date: nextDate || null,
             payment_channel: channel,
+            payment_method: paymentMethod,
             status,
             memo: memo || null,
             service_id: serviceId || null,
@@ -257,7 +278,10 @@ export default function SubscriptionForm({ services, initial }: Props) {
         <span className="font-medium">이름</span>
         <input
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            edited("name");
+            setName(e.target.value);
+          }}
           maxLength={100}
           required
           placeholder="예: 넷플릭스"
@@ -274,13 +298,14 @@ export default function SubscriptionForm({ services, initial }: Props) {
             <input
               id="amount"
               value={amount}
-              onChange={(e) =>
+              onChange={(e) => {
+                edited("amount");
                 setAmount(
                   currency === "USD"
                     ? e.target.value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1")
                     : e.target.value.replace(/[^\d]/g, ""),
-                )
-              }
+                );
+              }}
               inputMode={currency === "USD" ? "decimal" : "numeric"}
               required
               placeholder={currency === "USD" ? "20.00" : "17000"}
@@ -289,6 +314,8 @@ export default function SubscriptionForm({ services, initial }: Props) {
             <select
               value={currency}
               onChange={(e) => {
+                edited("currency");
+                edited("amount");
                 setCurrency(e.target.value as Currency);
                 setAmount("");
               }}
@@ -312,7 +339,10 @@ export default function SubscriptionForm({ services, initial }: Props) {
           <span className="font-medium">결제 주기</span>
           <select
             value={cycle}
-            onChange={(e) => setCycle(e.target.value as typeof cycle)}
+            onChange={(e) => {
+              edited("cycle");
+              setCycle(e.target.value as typeof cycle);
+            }}
             className={inputClass}
           >
             {BILLING_CYCLES.map((c) => (
@@ -329,28 +359,54 @@ export default function SubscriptionForm({ services, initial }: Props) {
         <input
           type="date"
           value={nextDate}
-          onChange={(e) => setNextDate(e.target.value)}
+          onChange={(e) => {
+            edited("nextDate");
+            setNextDate(e.target.value);
+          }}
           className={inputClass}
         />
       </label>
 
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="font-medium">어디서 결제했나요?</span>
-        <select
-          value={channel}
-          onChange={(e) => setChannel(e.target.value as typeof channel)}
-          className={inputClass}
-        >
-          {PAYMENT_CHANNELS.map((c) => (
-            <option key={c} value={c}>
-              {PAYMENT_CHANNEL_LABELS[c]}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-zinc-500">
-          결제 경로에 따라 해지하는 곳이 달라요. 모르면 &quot;잘 모르겠어요&quot;를 고르세요.
-        </span>
-      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm">
+          <span className="font-medium">어디서 결제했나요?</span>
+          <select
+            value={channel}
+            onChange={(e) => setChannel(e.target.value as typeof channel)}
+            className={inputClass}
+          >
+            {PAYMENT_CHANNELS.map((c) => (
+              <option key={c} value={c}>
+                {PAYMENT_CHANNEL_LABELS[c]}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-zinc-500">
+            결제 경로에 따라 해지하는 곳이 달라요. 모르면 &quot;잘 모르겠어요&quot;를 고르세요.
+          </span>
+        </label>
+
+        <label className="flex min-w-0 flex-col gap-1.5 text-sm">
+          <span className="font-medium">무엇으로 결제했나요?</span>
+          <select
+            value={paymentMethod}
+            onChange={(e) => {
+              edited("method");
+              setPaymentMethod(e.target.value as PaymentMethod);
+            }}
+            className={inputClass}
+          >
+            {PAYMENT_METHODS.map((m) => (
+              <option key={m} value={m}>
+                {PAYMENT_METHOD_LABELS[m]}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-zinc-500">
+            카드, 계좌이체, 네이버페이 같은 간편결제 등이에요. 카드번호는 입력하지 않아요.
+          </span>
+        </label>
+      </div>
 
       {isEdit && (
         <label className="flex flex-col gap-1.5 text-sm">

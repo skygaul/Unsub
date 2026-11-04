@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   BILLING_CYCLE_LABELS,
   PAYMENT_CHANNEL_LABELS,
+  PAYMENT_METHOD_LABELS,
   daysUntil,
   formatMoney,
   formatWon,
@@ -53,6 +54,9 @@ function SubscriptionCard({ sub, rate }: { sub: Subscription; rate: number }) {
             {sub.currency === "USD" && ` (약 ${formatWon(toKrw(sub.amount, sub.currency, rate))})`} ·{" "}
             {BILLING_CYCLE_LABELS[sub.billing_cycle]} ·{" "}
             {PAYMENT_CHANNEL_LABELS[sub.payment_channel]}
+            {sub.payment_method && sub.payment_method !== "unknown" && (
+              <> · {PAYMENT_METHOD_LABELS[sub.payment_method]}</>
+            )}
           </p>
           {sub.next_billing_date && !cancelled && (
             <p className="mt-1 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">

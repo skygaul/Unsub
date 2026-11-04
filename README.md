@@ -13,9 +13,9 @@
 
 ## 주요 기능
 - **Google 로그인**: Supabase Auth (OAuth). 10분 동안 활동이 없으면 자동 로그아웃(만료 1분 전에 안내)
-- **내 구독 관리**: 구독 추가·수정·삭제, 한 달 구독료 합계, 7일 안에 결제될 구독 표시
+- **내 구독 관리**: 구독 추가·수정·삭제, 한 달 구독료 합계, 7일 안에 결제될 구독 표시, 어디서(앱스토어·직접 결제 등)·무엇으로(카드·간편결제 등) 결제했는지 기록
 - **달러 결제 지원**: 원화와 달러 구독을 함께 관리하고, 합계는 그날의 실제 환율로 원화 환산
-- **결제 문자 자동 입력**: 문자를 붙여넣으면 서비스, 금액(원·달러), 결제 주기를 읽어 입력칸을 채움 (저장 전에 사용자가 확인)
+- **결제 문자 자동 입력**: 문자를 붙여넣으면 서비스, 금액(원·달러), 결제 주기, 결제 수단(카드·간편결제 등, 근거가 있을 때만)을 읽어 입력칸을 채움 (저장 전에 사용자가 확인)
 - **구독 분석**: 1년 총액, 분류별 비중(영상·음악, AI 도구, 쇼핑 멤버십 등), 가장 비싼 구독 순위. 같은 서비스 중복 등록이나 영상·음악·AI 구독이 여러 개일 때 해당 분류 아래에 "정리해 볼까요?" 안내와 해지 방법 링크를 표시
 - **해지 완료 표시와 절약액**: 해지한 구독을 "해지함"으로 표시하면 매달·1년에 아끼는 금액을 보여 줌
 - **결제 달력**: 월 단위 달력에 결제 예정 구독과 그 달 결제 금액을 표시 (월간은 매달, 연간은 결제되는 달에만)
@@ -27,7 +27,7 @@
 | PRD | 문제·유저·기능·데이터 정의, 버전별 변경 이력(v0.1~v0.6) | [PRD.md](PRD.md) |
 | 프론트엔드 | 화면 7종(랜딩·로그인, 내 구독, 구독 추가·수정, 결제 달력, 해지 가이드 목록·상세, 개인정보처리방침) + Google 로그인 | `src/app/`, `src/components/` |
 | 백엔드/API | 구독 CRUD, 서비스 조회, 문자 분석 API (인증·입력 검증 포함) | `src/app/api/` |
-| DB 연동 | Supabase PostgreSQL, 사용자별 데이터 분리(RLS) | [supabase/schema.sql](supabase/schema.sql), [supabase/seed.sql](supabase/seed.sql), [supabase/migration-v0.5-currency.sql](supabase/migration-v0.5-currency.sql) |
+| DB 연동 | Supabase PostgreSQL, 사용자별 데이터 분리(RLS) | [supabase/schema.sql](supabase/schema.sql), [supabase/seed.sql](supabase/seed.sql), [supabase/migration-v0.5-currency.sql](supabase/migration-v0.5-currency.sql), [supabase/migration-v0.11-payment-method.sql](supabase/migration-v0.11-payment-method.sql) |
 | 배포·AI 확장 | Vercel 배포(GitHub 푸시 시 자동 재배포), Claude API로 결제 문자 분석 | `src/lib/parse-payment.ts`, `src/lib/rule-parser.ts` |
 
 ## AI 활용 (결제 문자 분석)
@@ -86,7 +86,7 @@ npm run dev
 3. Authentication > Providers에서 Google을 켜고 Google Cloud의 OAuth Client ID/Secret을 입력한다.
 4. Authentication > URL Configuration에 Site URL과 Redirect URL(`http://localhost:3000/auth/callback`, 배포 주소의 `/auth/callback`)을 추가한다.
 
-**이미 예전 `schema.sql`을 실행해 둔 DB**라면 [supabase/migration-v0.5-currency.sql](supabase/migration-v0.5-currency.sql)도 한 번 실행해야 한다(달러 지원용 `currency` 컬럼 추가, 여러 번 실행해도 안전). 실행하지 않으면 구독 추가와 결제 달력이 실패한다. 새로 만든 DB는 최신 `schema.sql`에 이미 포함돼 있어 필요 없다.
+**이미 예전 `schema.sql`을 실행해 둔 DB**라면 `supabase/migration-*.sql`을 번호 순서대로 한 번씩 실행해야 한다([v0.5](supabase/migration-v0.5-currency.sql): 달러 지원용 `currency` 컬럼, [v0.11](supabase/migration-v0.11-payment-method.sql): 결제 수단 `payment_method` 컬럼. 여러 번 실행해도 안전). 실행하지 않으면 구독 추가와 결제 달력이 실패한다. 새로 만든 DB는 최신 `schema.sql`에 이미 포함돼 있어 필요 없다.
 
 `cancel-guides.json`을 수정했다면 `node scripts/generate-seed.mjs`로 seed.sql을 다시 만든다.
 
@@ -96,7 +96,7 @@ npm test                 # 시험 전체 실행 (실행한 시험별 결과와 �
 npm test -- idle         # 이름에 "idle"이 들어간 시험만
 npm run test:ai          # Claude 실제 호출 시험 (API 키 필요, 비용 발생, 1센트 이하)
 ```
-시험은 `scripts/test-*.mjs`이고(문자 파서, 입력 검증, 결제 달력, 구독 분석, 환율, 자동 로그아웃, 로그인 쿠키, 호출 제한, 해지 가이드 캐시), `npm test`는 `test:ai`를 뺀 모두를 실행합니다.
+시험은 `scripts/test-*.mjs`이고(문자 파서, 입력 검증, 폼 자동 채움, 결제 달력, 구독 분석, 환율, 자동 로그아웃, 로그인 쿠키, 호출 제한, 해지 가이드 캐시), `npm test`는 `test:ai`를 뺀 모두를 실행합니다.
 
 ### 자동 점검 (CI)
 `main` 푸시와 PR마다 GitHub Actions([.github/workflows/ci.yml](.github/workflows/ci.yml))가 `npm run lint`, `npm test`, `npm run build`를 실행합니다. Vercel의 자동 배포는 이 결과를 기다리지 않으므로, CI는 PR을 병합하기 전에 깨졌는지 확인하고 푸시 직후 문제를 알리는 용도입니다.

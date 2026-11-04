@@ -1,5 +1,6 @@
 // 비용 없이 동작하는 규칙 기반 결제 문자 파서.
 // 서비스와 금액이 명확하면 Claude를 호출하지 않고 여기서 끝낸다.
+import type { PaymentMethod } from "@/lib/types";
 
 export type ParsedPayment = {
   is_subscription_payment: boolean;
@@ -11,6 +12,8 @@ export type ParsedPayment = {
   billing_cycle: "monthly" | "yearly" | null;
   next_billing_date: string | null;
   payment_channel: "direct" | "apple" | "google_play" | "carrier" | "unknown";
+  /** 무엇으로 결제했는지. 문자에 근거가 없으면 "unknown" */
+  payment_method: PaymentMethod;
   notes: string | null;
 };
 
@@ -39,7 +42,25 @@ const SERVICE_PATTERNS: Record<string, RegExp> = {
   notion: /\bnotion\b|노션/i,
 };
 
-const KEYWORD_SUBSCRIPTION = /구독|정기\s*결제|자동\s*결제|멤버십|갱신|subscription|renew/i;
+// 결제 수단 단서. 위에서부터 먼저 맞는 것을 쓴다. "네이버페이로 삼성카드 결제"처럼 둘이 같이 나오면
+// 실제로 결제한 방식인 간편결제를 우선한다. 카드번호로 카드사를 추측하지 않고, 문자에 적힌 단어만 본다.
+const METHOD_PATTERNS: [PaymentMethod, RegExp][] = [
+  [
+    "simple_pay",
+    /네이버\s*페이|npay|카카오\s*페이|kakao\s*pay|토스\s*페이|toss\s*pay|삼성\s*페이|samsung\s*pay|애플\s*페이|apple\s*pay|구글\s*페이|google\s*pay|페이코|payco|스마일\s*페이|ssg\s*pay|쿠페이|paypal|페이팔/i,
+  ],
+  ["mobile", /소액\s*결제|휴대폰\s*결제|통신사\s*결제|휴대폰\s*요금/],
+  ["points", /포인트\s*(결제|사용|차감)|상품권|기프트\s*카드|기프티콘|적립금\s*사용/],
+  ["bank", /계좌\s*이체|자동\s*이체|무통장|실시간\s*이체|계좌\s*출금|통장\s*출금/],
+  ["card", /카드|체크|신용|visa|master\s*card|amex|american\s*express|jcb|unionpay/i],
+];
+
+function detectPaymentMethod(text: string): PaymentMethod {
+  for (const [method, re] of METHOD_PATTERNS) if (re.test(text)) return method;
+  return "unknown";
+}
+
+const KEYWORD_SUBSCRIPTION =/구독|정기\s*결제|자동\s*결제|멤버십|갱신|subscription|renew/i;
 
 function parseAmount(text: string) {
   const matches = [...text.matchAll(/(\d{1,3}(?:,\d{3})+|\d+)\s*원/g)];
@@ -167,6 +188,7 @@ export function ruleParse(text: string, services: ServiceInfo[], today: string):
     billing_cycle: billingCycle,
     next_billing_date: nextDate,
     payment_channel: channel,
+    payment_method: detectPaymentMethod(text),
     notes: notes.length ? notes.join(" ") : null,
   };
 
