@@ -9,7 +9,7 @@
 
 과제 제출용 서비스는 **완성·배포·공개 상태**입니다. 운영 주소 `https://unsub-unsub1.vercel.app`, 저장소 `https://github.com/skygaul/Unsub`(Public). 이후 작업은 **기능 추가·개선**이며, 평가 기간에는 `main` 푸시(= 자동 배포)를 피하세요.
 
-> v0.8(보안)까지 푸시·배포됨(`772932b`). **2026-11-04 사용자가 운영 사이트에서 Google 로그인, 구독 추가, 결제 문자 자동 입력, 콘솔에 CSP 위반 없음을 확인함.** 아직 운영에서 확인 기록이 없는 것: 자동 로그아웃(안내 창, 10분 만료), 로딩·오류 화면, 호출 제한의 429. 5장 "v0.6~v0.8" 참고.
+> v0.9(CI)와 Dependabot PR 병합까지 푸시·배포됨(`eabc124`). 이전 v0.8(보안)은 `772932b`. **2026-11-04 사용자가 운영 사이트에서 Google 로그인, 구독 추가, 결제 문자 자동 입력, 콘솔에 CSP 위반 없음을 확인함.** 아직 운영에서 확인 기록이 없는 것: 자동 로그아웃(안내 창, 10분 만료), 로딩·오류 화면, 호출 제한의 429. 5장 "v0.6~v0.8" 참고.
 
 ---
 
@@ -183,14 +183,20 @@ first-service/
 - **Dependabot** (`.github/dependabot.yml`): npm 의존성을 매주 월요일(KST) PR로 제안, 마이너·패치는 한 PR로 묶고 메이저는 개별 PR, 열린 PR 최대 5개. **GitHub 저장소 Settings > Code security에서 Dependabot alerts·security updates를 켜는 것은 사용자가 직접 해야 함**. PR은 main에 병합하기 전까지 운영에 반영되지 않음(병합하면 자동 배포되므로 `npm run build`와 시험 확인 후 병합)
 - **검증**: 운영 빌드를 띄워 응답 헤더 확인, 브라우저에서 같은 출처 요청 통과·외부 주소 요청은 CSP가 차단·Supabase 주소 요청 통과·화면 정상 동작·콘솔에는 일부러 낸 위반만 있음을 확인함. 호출 제한은 시험(`test-rate-limit.mjs`)으로만 확인했고 **실제 로그인 상태에서 429가 나는 것은 확인 전**. **2026-11-04 사용자가 로컬 운영 빌드(`npm run build && npm start`)에서 구글 로그인, 구독 추가·수정·삭제, 결제 문자 자동 입력, 결제 달력이 정상이고 콘솔에 CSP 위반이 없음을 확인함. GitHub의 Dependabot alerts·security updates도 사용자가 켬.** **배포된 운영 사이트(`unsub-unsub1.vercel.app`)에서도 사용자가 Google 로그인, 구독 추가, 결제 문자 자동 입력이 정상이고 콘솔에 CSP 위반이 없음을 확인함(2026-11-04).** 호출 제한의 429는 운영에서도 확인 기록 없음(시험 스크립트로만 확인)
 
-### v0.9 자동 점검 CI (푸시됨 2026-11-04, GitHub Actions 첫 실행 확인 전)
+### v0.9 자동 점검 CI (푸시됨 2026-11-04, GitHub Actions 첫 실행 통과)
 - **`npm test`** = `scripts/run-tests.mjs`가 `scripts/test-*.mjs`를 모두 실행하고 시험별 결과·요약을 출력, 하나라도 실패하면 종료 코드 1(실패 출력만 자세히 보여 주고 실행 환경의 경고 문구는 걸러 냄). `npm test -- <이름 일부>`로 일부만 실행. 새 `test-*.mjs`를 만들면 자동으로 포함됨. 실제 Claude를 호출하는 `test-ai-parse.mjs`는 제외(`npm run test:ai`로 따로 실행)
 - **CI** (`.github/workflows/ci.yml`): `main` 푸시와 PR마다 `npm ci` → `npm run lint` → `npm test` → `npm run build`. Node 26(개발 PC와 같은 메이저, 시험이 Node의 TypeScript 직접 실행을 씀). 빌드는 가짜 Supabase 키(`example.supabase.co`, `dummy`)로 하며 진짜 비밀값은 쓰지 않고 결과물은 배포되지 않음. 같은 브랜치의 연속 푸시는 이전 실행을 취소
 - **중요한 한계**: Vercel 자동 배포는 CI 결과를 **기다리지 않음**. main에 푸시하면 CI가 실패해도 배포됨. CI는 ① Dependabot 등 PR을 병합하기 전에 깨졌는지 확인하고 ② 푸시 직후 문제를 빨리 알리는 용도. 배포 자체를 막으려면 PR 방식 + 브랜치 보호 규칙(CI 통과 필수)이 필요하지만, 지금처럼 main에 바로 푸시하는 흐름이 막히므로 적용하지 않았음
 - **Dependabot**: npm에 더해 GitHub Actions(`actions/checkout`, `actions/setup-node`) 버전도 매주 점검
-- **검증한 것(로컬)**: `npm test` 8개 통과, 시험을 일부러 실패시키면 종료 코드 1과 원인 출력, 필터 동작, `npm ci --dry-run`(잠금 파일 일치), 워크플로 YAML 문법, `.env.local` 없이 가짜 키로 빌드 통과(CI와 같은 조건). **아직 확인 못 한 것**: GitHub Actions에서 실제로 실행된 결과. 특히 `node-version: 26`을 setup-node가 지원하는지는 첫 실행에서 확인해야 함 — 실패하면 Actions 탭에서 "Setup Node" 단계 오류를 보고 버전을 24 등으로 낮출 것(시험이 Node의 TypeScript 직접 실행에 의존하므로 22.18 이상 필요)
-- **Dependabot 현황 (2026-11-04 확인)**: 설정 직후 PR 4개가 올라옴. #1 react·react-dom 19.3.0→19.3.1(패치, 낮은 위험), #2 typescript 5.9.3→7.0.2(메이저), #3 eslint 9→10(메이저), #4 @types/node 20→26(메이저, 타입만). **병합하면 main에 들어가 자동 배포되므로 CI가 초록색일 때만 병합**하고, 메이저(#2·#3)는 호환 문제 가능성이 커서 CI 없이 병합하지 말 것. 이 PR들은 CI 도입 전에 만들어져 CI가 안 붙어 있으므로 PR에 `@dependabot rebase` 댓글을 달아 다시 만들게 하면 CI가 실행됨. 메이저 업데이트를 받지 않으려면 PR에 `@dependabot ignore this major version` 댓글
-- **보안 알림 minimatch(중간)**: 글롭 처리의 서비스 거부 취약점. `npm audit --omit=dev`는 0개이고 문제의 패키지는 eslint 계열 플러그인이 쓰는 개발용이라 **운영 사이트에는 영향 없음**. Dependabot 보안 업데이트 작업이 실패한 것은 고친 버전(11.0.1)이 메이저라서 이 패키지를 3.x로 요구하는 eslint 플러그인이 받아들이지 못하기 때문(설정 문제 아님). 선택지: 알림을 "개발 도구에만 쓰여 운영 영향 없음"으로 Dismiss, 또는 eslint 플러그인이 새 버전을 낼 때까지 대기. `npm audit`(개발 도구 포함)에는 같은 이유의 moderate 16건이 나옴
+- **검증한 것(로컬)**: `npm test` 8개 통과, 시험을 일부러 실패시키면 종료 코드 1과 원인 출력, 필터 동작, `npm ci --dry-run`(잠금 파일 일치), 워크플로 YAML 문법, `.env.local` 없이 가짜 키로 빌드 통과(CI와 같은 조건). **GitHub Actions 첫 실행(`c8b8ec4`, 1분 28초)이 모든 단계(npm ci, 린트, 시험, 빌드) 통과**함. `node-version: 26`도 setup-node에서 문제없이 동작. 실행 주석 2건(동작에는 영향 없음): ① `actions/checkout@v4`·`actions/setup-node@v4`가 Node 20 기반이라 deprecated이며 현재는 Node 24로 강제 실행됨 → Dependabot(github-actions)이 새 메이저 버전을 PR로 제안할 것 ② `ubuntu-latest`가 2026-10-19부터 Ubuntu 26으로 이전 중. 시험이 실패하면 Node 버전이 원인일 수 있으므로 Node의 TypeScript 직접 실행이 가능한 22.18 이상인지 먼저 볼 것
+- **Dependabot PR 처리 결과 (2026-11-04)**: 설정 직후 PR 4개가 올라왔고, CI 도입 후 각 PR에 `@dependabot rebase` 댓글을 달아 CI를 붙여 판단함(`gh`로 댓글, 병합은 권한 설정상 에이전트가 못 하고 사용자가 GitHub 화면에서 함).
+  - #1 react·react-dom 19.3.0→19.3.1: CI 통과 → **병합·배포됨**(`519d174`)
+  - #3 eslint 9→10: CI 통과 → **병합·배포됨**(`e710536`). main CI도 통과
+  - #2 typescript 5.9→7.0: **CI 실패**(`typescript-eslint does not support TS 7.0` — 린트 도구가 아직 TS 7 미지원) → 닫기로 하고 `@dependabot ignore this major version` 댓글을 달았음. 처리가 안 되면 화면에서 직접 Close(직접 닫은 PR의 버전은 다시 제안되지 않음). TS 7을 지원하는 typescript-eslint가 나오면 재검토
+  - #4 @types/node 20→26: CI 통과, **보류**. `@types/node`는 Vercel 런타임 Node 버전에 맞추는 것이 원칙인데 Vercel 프로젝트의 Node 버전(Settings > General > Node.js Version)을 아직 확인하지 못함
+  - 이후 새로 올라온 #5 `actions/setup-node` 4→7, #6 `actions/checkout` 4→7: CI 통과 → **병합·배포됨**(`fe9150f`, `eabc124`). 병합 후 main CI가 새 버전으로 통과했고 Node 20 deprecated 경고도 사라짐
+- **Dependabot 병합 원칙**: 병합하면 main에 들어가 Vercel이 자동 배포하므로 **CI가 초록색일 때만** 병합. 같은 파일(`package.json`, `package-lock.json`, `ci.yml`)을 건드리는 PR이 여럿이면 하나 병합한 뒤 나머지는 Dependabot이 다시 만들 때까지(또는 `@dependabot rebase`) 기다렸다가 CI를 보고 병합. 병합 후 로컬은 `git pull` → `npm ci`(개발 서버를 끈 상태에서)
+- **보안 알림 minimatch(중간, 알림 #1, 2026-11-04 사용자가 Dismiss 처리함, 사유 `not_used`)**: 글롭 처리의 서비스 거부 취약점. `npm audit --omit=dev`는 0개이고 문제의 패키지(`eslint-config-next` 안의 minimatch 3.1.5)는 린트용 개발 도구라 **운영 사이트에는 영향 없음**. eslint 10으로 올려도 이 3.1.5는 남아 있어 해결되지 않음(lock 파일로 확인). Dependabot 보안 업데이트가 실패한 것은 고친 버전(11.0.1)이 메이저라 `eslint-config-next`가 요구하는 3.x와 맞지 않기 때문. 새 버전이 나오면 Dependabot이 다시 알려 줌. `npm audit`(개발 도구 포함)에는 같은 계열의 moderate 15건이 남아 있고 `npm audit --omit=dev`는 0건
 - 첫 실행 확인: 푸시 후 저장소의 **Actions** 탭에서 "CI" 실행이 초록색으로 끝나는지 본다. README 맨 위 배지도 초록 "passing"이 됨
 
 ### 5c. 배포·운영 메모
@@ -262,7 +268,8 @@ first-service/
 ## 8. 개발 환경 메모
 
 - Node v26.7.0, npm 11.19.0, git 2.56.0. Windows 11. Git Bash(POSIX) 사용 가능. 줄바꿈 경고(LF→CRLF)는 무시해도 됨
-- 개발 서버: `npm run dev` (http://localhost:3000). **로컬도 운영과 같은 Supabase DB를 씀** → 로컬에서 만든 구독은 운영에도 보임
+- 개발 서버: `npm run dev` (http://localhost:3000)
+- **`npm ci`/`npm install`은 개발 서버(`npm run dev`)를 끈 상태에서** 할 것. Windows에서는 서버가 `lightningcss` 같은 `.node` 파일을 잡고 있어 `EPERM: unlink`로 실패하고, `npm ci`는 먼저 `node_modules`를 지우므로 **node_modules가 반쯤 지워진 상태**가 됨(`Cannot find module 'react'`). 이 경우 서버를 끄고 `npm ci`를 다시 실행하면 복구됨. 개발 서버는 이 앱의 Terminal 패널에서 `Ctrl+C`로 끔. 의존성 업데이트(Dependabot PR 병합) 후 로컬 동기화 순서: 개발 서버 종료 → `git pull` → `npm ci` → `npm run lint`, `npm test`, `npm run build`. **로컬도 운영과 같은 Supabase DB를 씀** → 로컬에서 만든 구독은 운영에도 보임
 - 빌드·린트: `npm run build`, `npm run lint`
 - 웹 조사 시 Reddit, 네이버 도메인은 도구에서 접근이 막혀 있음
 
