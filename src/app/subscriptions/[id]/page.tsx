@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import SubscriptionForm from "@/components/SubscriptionForm";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import type { Subscription } from "@/lib/types";
 import { isUuid } from "@/lib/validation";
@@ -25,7 +26,8 @@ export default async function EditSubscriptionPage(
     .maybeSingle();
   if (!sub) notFound();
 
-  const { data: services } = await supabase
+  // 서비스 목록은 공개 데이터라 캐시된 공개용 클라이언트로 읽는다(구독 같은 사용자 데이터는 위의 supabase로)
+  const { data: services } = await createPublicClient()
     .from("services")
     .select("id, name")
     .order("name");

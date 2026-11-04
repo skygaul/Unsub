@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import VerificationBadge from "@/components/VerificationBadge";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { Service } from "@/lib/types";
 
 // cancel JSON의 키를 사람이 읽는 이름으로 바꾼다
@@ -50,7 +50,7 @@ export default async function GuideDetailPage(
   const channelParam = typeof query.channel === "string" ? query.channel : "all";
   const tab = CHANNEL_TABS.find((t) => t.id === channelParam) ?? CHANNEL_TABS[0];
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data } = await supabase
     .from("services")
     .select("*")

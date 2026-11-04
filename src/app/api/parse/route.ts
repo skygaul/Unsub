@@ -7,6 +7,7 @@ import {
   maskSensitiveNumbers,
   parsePaymentText,
 } from "@/lib/parse-payment";
+import { createPublicClient } from "@/lib/supabase/public";
 import { ruleParse } from "@/lib/rule-parser";
 import { todayKst } from "@/lib/types";
 
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
   const { text, masked } = maskSensitiveNumbers(raw.trim());
 
   // 가이드가 있는 서비스 목록 (규칙 매칭과 모델의 service_id 선택에 모두 쓴다)
-  const { data: serviceRows } = await auth.supabase.from("services").select("id, name");
+  const { data: serviceRows } = await createPublicClient().from("services").select("id, name");
   const services = (serviceRows ?? []) as { id: string; name: string }[];
   const serviceIds = services.map((s) => s.id);
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import VerificationBadge from "@/components/VerificationBadge";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { Verification } from "@/lib/types";
 
 type Row = {
@@ -12,7 +12,7 @@ type Row = {
 };
 
 export default async function GuidesPage() {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("services")
     .select("id, name, channels, verification, last_verified")
