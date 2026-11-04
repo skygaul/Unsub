@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { IDLE_TIMEOUT_MS } from "@/lib/idle";
 
 export const metadata: Metadata = {
   title: "개인정보처리방침 | 구독 해지 도우미",
@@ -58,7 +59,7 @@ export default function PrivacyPage() {
           <li>한 달 구독료 계산, 결제 예정일과 결제 달력 표시, 구독 분석(분류별 비중 등)</li>
           <li>달러 결제 금액을 그날의 환율로 원화로 환산해 합계에 반영</li>
           <li>결제 문자에서 구독 정보를 추출해 입력을 돕는 기능</li>
-          <li>10분 동안 활동이 없으면 자동으로 로그아웃해 계정을 보호</li>
+          <li>{Math.round(IDLE_TIMEOUT_MS / 60000)}분 동안 활동이 없으면 자동으로 로그아웃해 계정을 보호</li>
         </ul>
         <p className="mt-2 text-sm leading-6 text-zinc-700 dark:text-zinc-300">
           광고나 마케팅에 쓰지 않고, 제3자에게 판매하지 않아요.
