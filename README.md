@@ -89,5 +89,6 @@ node scripts/test-billing-calendar.mjs  # 결제 달력·절약액
 node scripts/test-insights.mjs          # 구독 분석·정리 안내
 node scripts/test-exchange-rate.mjs     # 환율 (실제 환율 서비스를 한 번 호출)
 node scripts/test-idle.mjs              # 자동 로그아웃 계산
+node scripts/test-auth-cookie.mjs       # 로그인 쿠키 판별
 node scripts/test-ai-parse.mjs          # Claude 실제 호출 (API 비용 발생, 1센트 이하)
 ```

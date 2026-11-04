@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasSupabaseAuthCookie } from "@/lib/supabase/auth-cookie";
 import {
   IDLE_TIMEOUT_MS,
   LAST_ACTIVE_COOKIE,
@@ -12,6 +13,27 @@ import {
 const PROTECTED_PREFIXES = ["/dashboard", "/subscriptions", "/calendar"];
 
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  const isApi = pathname.startsWith("/api");
+  const now = Date.now();
+
+  // 로그인 세션 쿠키가 없는 방문자는 로그인한 사용자가 아니므로 Supabase에 물어볼 필요가 없다.
+  // (공개 페이지를 여는 방문자의 요청마다 생기던 Supabase 왕복을 없앤다.)
+  if (!hasSupabaseAuthCookie(request.cookies.getAll().map((c) => c.name))) {
+    if (isProtected) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      const redirect = NextResponse.redirect(url);
+      redirect.cookies.delete(LAST_ACTIVE_COOKIE);
+      return redirect;
+    }
+    const anonymous = NextResponse.next({ request });
+    if (request.cookies.has(LAST_ACTIVE_COOKIE)) anonymous.cookies.delete(LAST_ACTIVE_COOKIE);
+    return anonymous;
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -39,11 +61,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
-  const isApi = pathname.startsWith("/api");
-  const now = Date.now();
 
   // 로그인 상태에서 마지막 활동 후 IDLE_TIMEOUT_MS가 지났으면 이 기기의 세션을 끝낸다.
   // (탭을 닫아 두었다가 돌아온 경우를 여기서 잡는다. 열려 있는 탭은 IdleLogout이 처리한다.)

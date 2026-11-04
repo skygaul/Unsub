@@ -97,7 +97,7 @@ first-service/
 │  └─ migration-v0.5-currency.sql   이미 schema.sql을 실행한 DB에 currency 추가
 ├─ scripts/
 │  ├─ generate-seed.mjs, ts-loader.mjs
-│  └─ test-*.mjs                    시험 6종 (아래 "시험" 참고)
+│  └─ test-*.mjs                    시험 (아래 "시험" 참고)
 └─ src/
    ├─ proxy.ts                      세션 갱신 + 보호 경로 + 자동 로그아웃 확인(lib/supabase/proxy.ts)
    ├─ app/
@@ -152,6 +152,7 @@ first-service/
 | v0.4 / v0.4.1 | 대시보드 "구독 분석"(분류별 비중, 비싼 순위, 1년 총액) + "정리해 볼까요?" 안내를 **분류 막대 아래에 합침**. 안내 규칙: 중복 등록, 영상·음악 2개↑, AI 2개↑, 쿠팡 와우+네이버플러스 | `a899154`, `af00e67` |
 | v0.5 | 달러 결제(`currency`), **실제 환율** 환산, 문자 인식(`$20.00`, `US$`, `20 USD`, `20달러`), 금액·통화·주기 입력 칸 폭 조정 | `a899154`. **Supabase에서 `migration-v0.5-currency.sql` 실행 완료** |
 | 속도 | Vercel 함수 지역을 서울(icn1)로 변경 | 체감 속도 개선 확인 |
+| v0.7 | 로그인 쿠키가 없는 방문자는 프록시가 Supabase를 부르지 않음(`lib/supabase/auth-cookie.ts`), 로딩 화면(`loading.tsx` 5개, `components/Skeleton.tsx`), 오류·404 화면(`error.tsx`, `global-error.tsx`, `not-found.tsx`) | 미푸시. 아래 "v0.7" 참고 |
 
 ### v0.6 자동 로그아웃 (푸시·배포됨, 운영 동작 확인 전)
 - **동작**: 로그인한 채 **10분** 활동이 없으면 로그아웃, **만료 1분 전에 "곧 로그아웃돼요, 계속 사용하시겠어요?" 안내**(계속 사용 / 지금 로그아웃). 로그아웃되면 홈에 "자동으로 로그아웃됐어요" 안내
@@ -164,6 +165,14 @@ first-service/
 - 참고: 개발 모드(`npm run dev`)에서 `style={{user-select:"auto"}}` 때문에 hydration 경고가 뜨면 브라우저 확장 프로그램이 HTML을 바꾼 것이며 코드 문제가 아님(소스에 `user-select` 없음, 시크릿 창에서는 안 뜸)
 - DB·API 변경 없음
 
+### v0.7 속도·안정성 (코드 완료, 미푸시)
+- **프록시**: `src/lib/supabase/proxy.ts`가 `sb-*-auth-token`(분할 `.0`, `.1` 포함, `code-verifier` 제외) 쿠키가 없으면 Supabase 클라이언트를 만들지 않고 바로 응답함(보호 경로는 홈으로 이동, 남은 `last_active` 쿠키는 삭제). 쿠키가 있으면 기존대로 `getUser()`로 세션 갱신·자동 로그아웃 확인. 보호 경로 여부, 자동 로그아웃 동작은 그대로
+- **검증**: 요청 횟수를 세는 가짜 Supabase를 세워 확인함. 로그인 쿠키 없는 방문자가 `/`, `/privacy`, `/dashboard`를 열면 Supabase 요청 **0건**, `/guides`는 가이드 목록 조회 1건(정상), 올바른 세션 쿠키가 있으면 `GET /auth/v1/user` 1건
+- **로딩 화면**: `src/app/{dashboard,calendar,guides,guides/[serviceId],subscriptions}/loading.tsx`. 폭은 실제 페이지와 같게 맞춤. 페이지 레이아웃을 바꾸면 해당 `loading.tsx`도 맞출 것
+- **오류 화면**: Next 16.4의 `error.tsx`는 `({ error, retry })`를 받음(`retry`가 안정 버전). 서버 오류는 상세 내용 대신 `digest`만 전달되므로 화면에는 "오류 코드"만 표시. `global-error.tsx`는 자체 `<html>`이 필요하고 전역 CSS가 적용되지 않아 인라인 스타일을 씀
+- **아직 확인 못 한 것**: 로그인한 실제 화면에서 로딩 화면이 보이는 모습, 오류 화면(일부러 오류를 내서) 표시. 서울 지역 변경 후 체감 속도는 사용자가 확인함
+- 시험: `node scripts/test-auth-cookie.mjs`
+
 ### 5c. 배포·운영 메모
 - **푸시 = 자동 배포.** 코드 변경은 `git add -A && git commit && git push`로 반영(약 1분). **환경변수 변경은 재배포(Deployments > Redeploy)해야 반영**
 - Vercel 환경변수: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `ANTHROPIC_API_KEY`(설정됨). Deployment Protection(Vercel Authentication)은 **Disabled**(켜면 공개 접속 불가)
@@ -171,7 +180,7 @@ first-service/
 - Google Auth Platform: **프로덕션 게시 완료**, Branding(홈페이지, `/privacy`), 승인된 도메인에 `unsub-unsub1.vercel.app` 추가
 - **DB 변경이 있는 버전은 푸시 전에 Supabase SQL Editor에서 SQL을 먼저 실행**(로컬과 운영이 같은 DB). 순서가 바뀌면 새 코드가 없는 컬럼을 쓰려 해서 실패함. 새 DB는 `schema.sql` → `seed.sql`만 실행
 - Anthropic Console에서 월 사용 한도 설정·잔액 확인 권장. 잔액이 0이면 AI 자동 입력만 규칙 파서로 대체되고 서비스는 계속 동작
-- 푸시 전 점검: `npm run lint`, `npm run build`, 시험 6종
+- 푸시 전 점검: `npm run lint`, `npm run build`, `scripts/test-*.mjs` 시험 전체
 
 ### 시험 (`node scripts/<이름>.mjs`, 모두 통과)
 | 스크립트 | 확인 내용 |
@@ -182,6 +191,7 @@ first-service/
 | `test-insights` | 분류별 비중, 비싼 순서, 정리 안내 규칙과 분류 연결 |
 | `test-exchange-rate` | 환율 문구, **실제 환율 1회 호출**, 장애·이상값 폴백 |
 | `test-idle` | 자동 로그아웃 상태 경계(9분 안내, 10분 만료), 시계 오차 |
+| `test-auth-cookie` | Supabase 로그인 쿠키 판별(분할 쿠키, code-verifier 제외) |
 | `test-ai-parse` | **실제 Claude 호출**(비용 발생, 1센트 이하). 규칙 파서가 처리하지 못하는 문자만 호출 |
 
 ---
@@ -257,7 +267,7 @@ first-service/
 2. [PRD.md](PRD.md) 12장 변경 이력으로 버전별 변경 파악
 3. 코드 작성 전 `node_modules/next/dist/docs/01-app/`의 관련 문서 확인 (Next 16)
 4. `.env.local` 존재 여부 확인 → 없으면 사용자에게 `.env.example`을 보고 만들게 안내(값을 채팅에 붙여넣지 않게)
-5. `git status`로 미커밋 변경 확인, `npm run build`와 시험 6종이 통과하는지 확인한 뒤 작업 시작
+5. `git status`로 미커밋 변경 확인, `npm run build`와 `scripts/test-*.mjs` 시험 전체이 통과하는지 확인한 뒤 작업 시작
 6. DB를 바꾸는 작업이면 SQL 파일을 만들고 **사용자가 Supabase에서 먼저 실행한 뒤** 푸시하게 안내
 7. 작업이 끝나면 이 문서의 5·6장과 PRD 12장을 **고쳐서** 갱신(옛 상태 문장을 남기지 말 것)
 8. **기능·수집 정보·외부 서비스·쿠키가 바뀌면 `README.md`(주요 기능, 구현 위치 표, 한계)와 `src/app/privacy/page.tsx`(수집 항목, 이용 목적, 외부 서비스, 쿠키, 수정일 `UPDATED`)도 함께 갱신**할 것. 개인정보처리방침은 Google 로그인 게시 때 심사에 쓰인 공개 페이지임 (2026-11-04에 통화·쿠키·환율 서비스·자동 로그아웃 반영)
