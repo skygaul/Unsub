@@ -156,7 +156,7 @@ first-service/
 | v0.8 | 보안 헤더·기본 CSP(`next.config.ts`), API 호출 제한 확대(`lib/rate-limit.ts`), Dependabot(`.github/dependabot.yml`) | `772932b` 푸시·배포됨. 아래 "v0.8" 참고 |
 | v0.9 | `npm test`로 시험 통합, GitHub Actions CI(린트·시험·빌드), Dependabot에 Actions 추가 | 푸시됨. 위 "v0.9" 참고 |
 | v0.10 | 해지 가이드(공개 데이터) 5분 캐시: `lib/supabase/public.ts`, 7곳 전환 | `4350e2f` 푸시·배포됨. 아래 "v0.10" 참고 |
-| v0.11 | "무엇으로 결제했나요?"(결제 수단) 추가: `payment_method` 컬럼, 폼·카드 표시·문자 자동 입력 | 미푸시. **SQL 먼저**. 아래 "v0.11" 참고 |
+| v0.11 | "무엇으로 결제했나요?"(결제 수단) 추가: `payment_method` 컬럼, 폼·카드 표시·문자 자동 입력 | 푸시 완료(480dce7), CI 통과, 배포 반영 확인. SQL은 사전 실행함. 아래 "v0.11" 참고 |
 
 ### v0.6 자동 로그아웃 (푸시·배포됨, 운영 동작 확인 전)
 - **동작**: 로그인한 채 **10분** 활동이 없으면 로그아웃, **만료 1분 전에 "곧 로그아웃돼요, 계속 사용하시겠어요?" 안내**(계속 사용 / 지금 로그아웃). 로그아웃되면 홈에 "자동으로 로그아웃됐어요" 안내
@@ -185,7 +185,7 @@ first-service/
 - **Dependabot** (`.github/dependabot.yml`): npm 의존성을 매주 월요일(KST) PR로 제안, 마이너·패치는 한 PR로 묶고 메이저는 개별 PR, 열린 PR 최대 5개. **GitHub 저장소 Settings > Code security에서 Dependabot alerts·security updates를 켜는 것은 사용자가 직접 해야 함**. PR은 main에 병합하기 전까지 운영에 반영되지 않음(병합하면 자동 배포되므로 `npm run build`와 시험 확인 후 병합)
 - **검증**: 운영 빌드를 띄워 응답 헤더 확인, 브라우저에서 같은 출처 요청 통과·외부 주소 요청은 CSP가 차단·Supabase 주소 요청 통과·화면 정상 동작·콘솔에는 일부러 낸 위반만 있음을 확인함. 호출 제한은 시험(`test-rate-limit.mjs`)으로만 확인했고 **실제 로그인 상태에서 429가 나는 것은 확인 전**. **2026-11-04 사용자가 로컬 운영 빌드(`npm run build && npm start`)에서 구글 로그인, 구독 추가·수정·삭제, 결제 문자 자동 입력, 결제 달력이 정상이고 콘솔에 CSP 위반이 없음을 확인함. GitHub의 Dependabot alerts·security updates도 사용자가 켬.** **배포된 운영 사이트(`unsub-unsub1.vercel.app`)에서도 사용자가 Google 로그인, 구독 추가, 결제 문자 자동 입력이 정상이고 콘솔에 CSP 위반이 없음을 확인함(2026-11-04).** 호출 제한의 429는 운영에서도 확인 기록 없음(시험 스크립트로만 확인)
 
-### v0.11 결제 수단 "무엇으로 결제했나요?" (코드 완료, 미푸시)
+### v0.11 결제 수단 "무엇으로 결제했나요?" (배포 완료 480dce7)
 - **구분**: `payment_channel`(어디서: 직접 결제·Apple·Google Play·통신사, 해지 경로를 정함)과 `payment_method`(무엇으로: 카드·계좌이체·간편결제·휴대폰 소액결제·포인트·상품권·기타·잘 모르겠어요, 기본 `unknown`)는 별개. 값은 `src/lib/types.ts`의 `PAYMENT_METHODS`/`PAYMENT_METHOD_LABELS`. 신용·체크카드는 문자에 신용인지 체크인지 안 나오는 경우가 많아 **하나(`card`)로 묶음**
 - **DB**: `supabase/migration-v0.11-payment-method.sql`(`schema.sql`에도 반영). **푸시 전에 Supabase SQL Editor에서 먼저 실행**해야 함(안 하면 구독 저장이 실패). 기존 구독은 모두 `unknown`, 다시 실행해도 안전, 기존 앱 코드도 계속 동작
 - **화면**: `SubscriptionForm`에서 "어디서 결제했나요?" 옆에 "무엇으로 결제했나요?"를 나란히 배치(`sm` 이상에서 2열, 좁은 화면은 위아래). 대시보드 카드는 `… · 서비스에 직접 결제 · 신용·체크카드`처럼 표시하고 `unknown`이면 숨김(컬럼이 없는 옛 DB에서도 깨지지 않게 값이 있을 때만 표시)
