@@ -192,8 +192,8 @@ first-service/
 - **Dependabot PR 처리 결과 (2026-11-04)**: 설정 직후 PR 4개가 올라왔고, CI 도입 후 각 PR에 `@dependabot rebase` 댓글을 달아 CI를 붙여 판단함(`gh`로 댓글, 병합은 권한 설정상 에이전트가 못 하고 사용자가 GitHub 화면에서 함).
   - #1 react·react-dom 19.3.0→19.3.1: CI 통과 → **병합·배포됨**(`519d174`)
   - #3 eslint 9→10: CI 통과 → **병합·배포됨**(`e710536`). main CI도 통과
-  - #2 typescript 5.9→7.0: **CI 실패**(`typescript-eslint does not support TS 7.0` — 린트 도구가 아직 TS 7 미지원) → 닫기로 하고 `@dependabot ignore this major version` 댓글을 달았음. 처리가 안 되면 화면에서 직접 Close(직접 닫은 PR의 버전은 다시 제안되지 않음). TS 7을 지원하는 typescript-eslint가 나오면 재검토
-  - #4 @types/node 20→26: CI 통과, **보류**. `@types/node`는 Vercel 런타임 Node 버전에 맞추는 것이 원칙인데 Vercel 프로젝트의 Node 버전(Settings > General > Node.js Version)을 아직 확인하지 못함
+  - #2 typescript 5.9→7.0: **닫힘**(2026-11-04). **CI 실패**(`typescript-eslint does not support TS 7.0` — 린트 도구가 아직 TS 7 미지원) → 닫기로 하고 `@dependabot ignore this major version` 댓글을 달았음. 처리가 안 되면 화면에서 직접 Close(직접 닫은 PR의 버전은 다시 제안되지 않음). TS 7을 지원하는 typescript-eslint가 나오면 직접 올리는 것을 재검토(Dependabot은 직접 닫은 PR의 버전을 다시 제안하지 않음)
+  - #4 @types/node 20→26: CI 통과, Vercel의 Node.js Version이 26.x임을 확인한 뒤 **병합·배포됨**(`1c41588`). `@types/node`는 런타임 Node 버전에 맞추는 것이 원칙
   - 이후 새로 올라온 #5 `actions/setup-node` 4→7, #6 `actions/checkout` 4→7: CI 통과 → **병합·배포됨**(`fe9150f`, `eabc124`). 병합 후 main CI가 새 버전으로 통과했고 Node 20 deprecated 경고도 사라짐
 - **Dependabot 병합 원칙**: 병합하면 main에 들어가 Vercel이 자동 배포하므로 **CI가 초록색일 때만** 병합. 같은 파일(`package.json`, `package-lock.json`, `ci.yml`)을 건드리는 PR이 여럿이면 하나 병합한 뒤 나머지는 Dependabot이 다시 만들 때까지(또는 `@dependabot rebase`) 기다렸다가 CI를 보고 병합. 병합 후 로컬은 `git pull` → `npm ci`(개발 서버를 끈 상태에서)
 - **보안 알림 minimatch(중간, 알림 #1, 2026-11-04 사용자가 Dismiss 처리함, 사유 `not_used`)**: 글롭 처리의 서비스 거부 취약점. `npm audit --omit=dev`는 0개이고 문제의 패키지(`eslint-config-next` 안의 minimatch 3.1.5)는 린트용 개발 도구라 **운영 사이트에는 영향 없음**. eslint 10으로 올려도 이 3.1.5는 남아 있어 해결되지 않음(lock 파일로 확인). Dependabot 보안 업데이트가 실패한 것은 고친 버전(11.0.1)이 메이저라 `eslint-config-next`가 요구하는 3.x와 맞지 않기 때문. 새 버전이 나오면 Dependabot이 다시 알려 줌. `npm audit`(개발 도구 포함)에는 같은 계열의 moderate 15건이 남아 있고 `npm audit --omit=dev`는 0건
@@ -269,6 +269,7 @@ first-service/
 
 - Node v26.7.0, npm 11.19.0, git 2.56.0. Windows 11. Git Bash(POSIX) 사용 가능. 줄바꿈 경고(LF→CRLF)는 무시해도 됨
 - 개발 서버: `npm run dev` (http://localhost:3000)
+- **Node 버전은 세 곳 모두 26**: 개발 PC v26.7.0, GitHub CI(`ci.yml`의 `node-version: 26`), Vercel(프로젝트 **Settings > Build and Deployment > Node.js Version = 26.x**, 이 설정은 General이 아니라 Build and Deployment 메뉴에 있고 바꾸면 재배포해야 적용됨). 버전을 올리거나 내릴 때는 세 곳과 `@types/node`를 함께 맞출 것
 - **`npm ci`/`npm install`은 개발 서버(`npm run dev`)를 끈 상태에서** 할 것. Windows에서는 서버가 `lightningcss` 같은 `.node` 파일을 잡고 있어 `EPERM: unlink`로 실패하고, `npm ci`는 먼저 `node_modules`를 지우므로 **node_modules가 반쯤 지워진 상태**가 됨(`Cannot find module 'react'`). 이 경우 서버를 끄고 `npm ci`를 다시 실행하면 복구됨. 개발 서버는 이 앱의 Terminal 패널에서 `Ctrl+C`로 끔. 의존성 업데이트(Dependabot PR 병합) 후 로컬 동기화 순서: 개발 서버 종료 → `git pull` → `npm ci` → `npm run lint`, `npm test`, `npm run build`. **로컬도 운영과 같은 Supabase DB를 씀** → 로컬에서 만든 구독은 운영에도 보임
 - 빌드·린트: `npm run build`, `npm run lint`
 - 웹 조사 시 Reddit, 네이버 도메인은 도구에서 접근이 막혀 있음
