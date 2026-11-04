@@ -38,12 +38,18 @@
 ## 기술 스택
 Next.js 16 (App Router, TypeScript) · Tailwind CSS · Supabase (PostgreSQL, Auth, RLS) · Anthropic Claude API · 환율 조회(Frankfurter, 실패 시 ExchangeRate-API) · Vercel (서울 리전)
 
+## 보안
+- 사용자 데이터는 Supabase RLS로 본인만 접근, 모든 API가 서버에서 로그인과 입력을 검증
+- 보안 헤더(CSP, `X-Frame-Options`, `nosniff` 등)와 사용자별 API 호출 제한(`429` + `Retry-After`)
+- 결제 문자 원문은 저장하지 않고 카드·계좌번호 형태의 숫자는 분석 전에 가림
+- GitHub Dependabot으로 의존성 업데이트를 매주 점검
+
 ## 알려진 한계
 - 일부 서비스(디즈니+의 환불 규정, 쿠팡 와우·티빙·웨이브의 본문 대조)는 검증이 덜 끝났습니다. 각 가이드의 검증 수준 배지와 확인일로 구분해 표시합니다.
 - 해지 안내는 공개된 도움말을 정리한 참고 정보이며, 서비스 정책은 바뀔 수 있습니다. 해지 전에 공식 안내를 한 번 더 확인해 주세요.
 - 달러 구독의 원화 환산은 **그날의 기준 환율**(실시간 시세 아님)을 쓰며, 결제 시점의 환율은 기록하지 않습니다. 환율 조회에 실패하면 기본값(1달러 = 1,400원)으로 계산하고 화면에 표시합니다.
 - 자동 로그아웃은 공용 PC에 로그인을 두고 간 경우를 막는 편의 기능이며, 쿠키 탈취를 막는 보안 장치는 아닙니다.
-- 문자 분석의 호출 제한은 서버 인스턴스 메모리 기준입니다.
+- API 호출 제한(문자 분석 분당 8회, 구독 저장·수정·삭제 분당 60회, 조회 분당 120회)은 서버 인스턴스 메모리 기준입니다.
 
 ## 관련 문서
 - 기획 문서: [PRD.md](PRD.md)
@@ -90,5 +96,6 @@ node scripts/test-insights.mjs          # 구독 분석·정리 안내
 node scripts/test-exchange-rate.mjs     # 환율 (실제 환율 서비스를 한 번 호출)
 node scripts/test-idle.mjs              # 자동 로그아웃 계산
 node scripts/test-auth-cookie.mjs       # 로그인 쿠키 판별
+node scripts/test-rate-limit.mjs        # API 호출 제한
 node scripts/test-ai-parse.mjs          # Claude 실제 호출 (API 비용 발생, 1센트 이하)
 ```

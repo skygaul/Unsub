@@ -137,7 +137,7 @@ first-service/
 | `GET/POST /api/subscriptions` | 내 구독 목록·생성. `requireUser()` 인증, `parseSubscriptionInput()` 검증 |
 | `PATCH/DELETE /api/subscriptions/[id]` | 수정(보낸 필드만)·삭제. 남의 구독·없는 id는 404(RLS로 0행) |
 | `GET /api/services`, `/api/services/[id]` | 해지 가이드 목록·상세 (로그인 불필요) |
-| `POST /api/parse` | 문자 → 구독 필드. 로그인 필요, 사용자당 1분 8회(서버 메모리), 5~2000자. `source`: `rules`/`ai`/`rules_partial` |
+| `POST /api/parse` | 문자 → 구독 필드. 로그인 필요, 사용자당 1분 8회(`LIMITS.parse`), 5~2000자. `source`: `rules`/`ai`/`rules_partial` |
 
 ---
 
@@ -152,7 +152,8 @@ first-service/
 | v0.4 / v0.4.1 | 대시보드 "구독 분석"(분류별 비중, 비싼 순위, 1년 총액) + "정리해 볼까요?" 안내를 **분류 막대 아래에 합침**. 안내 규칙: 중복 등록, 영상·음악 2개↑, AI 2개↑, 쿠팡 와우+네이버플러스 | `a899154`, `af00e67` |
 | v0.5 | 달러 결제(`currency`), **실제 환율** 환산, 문자 인식(`$20.00`, `US$`, `20 USD`, `20달러`), 금액·통화·주기 입력 칸 폭 조정 | `a899154`. **Supabase에서 `migration-v0.5-currency.sql` 실행 완료** |
 | 속도 | Vercel 함수 지역을 서울(icn1)로 변경 | 체감 속도 개선 확인 |
-| v0.7 | 로그인 쿠키가 없는 방문자는 프록시가 Supabase를 부르지 않음(`lib/supabase/auth-cookie.ts`), 로딩 화면(`loading.tsx` 5개, `components/Skeleton.tsx`), 오류·404 화면(`error.tsx`, `global-error.tsx`, `not-found.tsx`) | 미푸시. 아래 "v0.7" 참고 |
+| v0.7 | 로그인 쿠키가 없는 방문자는 프록시가 Supabase를 부르지 않음(`lib/supabase/auth-cookie.ts`), 로딩 화면(`loading.tsx` 5개, `components/Skeleton.tsx`), 오류·404 화면(`error.tsx`, `global-error.tsx`, `not-found.tsx`) | `0458949` 푸시·배포됨. 아래 "v0.7" 참고 |
+| v0.8 | 보안 헤더·기본 CSP(`next.config.ts`), API 호출 제한 확대(`lib/rate-limit.ts`), Dependabot(`.github/dependabot.yml`) | 미푸시. 아래 "v0.8" 참고 |
 
 ### v0.6 자동 로그아웃 (푸시·배포됨, 운영 동작 확인 전)
 - **동작**: 로그인한 채 **10분** 활동이 없으면 로그아웃, **만료 1분 전에 "곧 로그아웃돼요, 계속 사용하시겠어요?" 안내**(계속 사용 / 지금 로그아웃). 로그아웃되면 홈에 "자동으로 로그아웃됐어요" 안내
@@ -165,13 +166,21 @@ first-service/
 - 참고: 개발 모드(`npm run dev`)에서 `style={{user-select:"auto"}}` 때문에 hydration 경고가 뜨면 브라우저 확장 프로그램이 HTML을 바꾼 것이며 코드 문제가 아님(소스에 `user-select` 없음, 시크릿 창에서는 안 뜸)
 - DB·API 변경 없음
 
-### v0.7 속도·안정성 (코드 완료, 미푸시)
+### v0.7 속도·안정성 (푸시·배포됨, 운영 확인 전)
 - **프록시**: `src/lib/supabase/proxy.ts`가 `sb-*-auth-token`(분할 `.0`, `.1` 포함, `code-verifier` 제외) 쿠키가 없으면 Supabase 클라이언트를 만들지 않고 바로 응답함(보호 경로는 홈으로 이동, 남은 `last_active` 쿠키는 삭제). 쿠키가 있으면 기존대로 `getUser()`로 세션 갱신·자동 로그아웃 확인. 보호 경로 여부, 자동 로그아웃 동작은 그대로
 - **검증**: 요청 횟수를 세는 가짜 Supabase를 세워 확인함. 로그인 쿠키 없는 방문자가 `/`, `/privacy`, `/dashboard`를 열면 Supabase 요청 **0건**, `/guides`는 가이드 목록 조회 1건(정상), 올바른 세션 쿠키가 있으면 `GET /auth/v1/user` 1건
 - **로딩 화면**: `src/app/{dashboard,calendar,guides,guides/[serviceId],subscriptions}/loading.tsx`. 폭은 실제 페이지와 같게 맞춤. 페이지 레이아웃을 바꾸면 해당 `loading.tsx`도 맞출 것
 - **오류 화면**: Next 16.4의 `error.tsx`는 `({ error, retry })`를 받음(`retry`가 안정 버전). 서버 오류는 상세 내용 대신 `digest`만 전달되므로 화면에는 "오류 코드"만 표시. `global-error.tsx`는 자체 `<html>`이 필요하고 전역 CSS가 적용되지 않아 인라인 스타일을 씀
 - **아직 확인 못 한 것**: 로그인한 실제 화면에서 로딩 화면이 보이는 모습, 오류 화면(일부러 오류를 내서) 표시. 서울 지역 변경 후 체감 속도는 사용자가 확인함
 - 시험: `node scripts/test-auth-cookie.mjs`
+
+### v0.8 보안 (코드 완료, 미푸시)
+- **보안 헤더** (`next.config.ts`의 `headers()`): `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`(카메라·마이크·위치·결제·USB 차단), `poweredByHeader: false`. HSTS는 Vercel이 이미 붙이므로 넣지 않음
+- **CSP** (운영 빌드에서만 적용, 개발 서버는 eval·웹소켓을 써서 제외): `default-src 'self'`, `script-src 'self' 'unsafe-inline'`, `connect-src 'self' <Supabase 주소>`(`NEXT_PUBLIC_SUPABASE_URL`에서 계산), `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`. **한계**: Next.js가 인라인 스크립트를 써서 `'unsafe-inline'`이 필요하므로 인라인 스크립트 주입(XSS)까지는 막지 못함. 외부 스크립트·프레임 삽입·플러그인·base 바꿔치기는 막음. 더 강하게 하려면 nonce 방식으로 바꿔야 하고 그러면 모든 페이지가 요청마다 렌더링됨
+- **CSP 때문에 조심할 것**: 외부 리소스(분석 스크립트, 외부 이미지·폰트, iframe, 새 API 주소)를 쓰면 `next.config.ts`의 CSP에 그 주소를 추가해야 함. 개발 서버에서는 CSP가 적용되지 않으므로 `npm run build && npm start`로 확인할 것(브라우저 콘솔의 "violates the following Content Security Policy"가 신호)
+- **호출 제한** (`src/lib/rate-limit.ts`의 `LIMITS`): 조회 `read` 분당 120회, 생성·수정·삭제 `write` 분당 60회, 문자 분석 `parse` 분당 8회, 사용자별. 한도를 넘으면 `429` + `Retry-After`(`enforceRateLimit()`, `lib/api.ts`). 서버 메모리 기준이라 서버가 여러 개면 인스턴스마다 따로 셈. 기록이 2000개를 넘으면 오래된 사용자 기록을 정리함. **로그인하지 않은 요청의 제한은 없음**(401을 돌려줄 뿐)
+- **Dependabot** (`.github/dependabot.yml`): npm 의존성을 매주 월요일(KST) PR로 제안, 마이너·패치는 한 PR로 묶고 메이저는 개별 PR, 열린 PR 최대 5개. **GitHub 저장소 Settings > Code security에서 Dependabot alerts·security updates를 켜는 것은 사용자가 직접 해야 함**. PR은 main에 병합하기 전까지 운영에 반영되지 않음(병합하면 자동 배포되므로 `npm run build`와 시험 확인 후 병합)
+- **검증**: 운영 빌드를 띄워 응답 헤더 확인, 브라우저에서 같은 출처 요청 통과·외부 주소 요청은 CSP가 차단·Supabase 주소 요청 통과·화면 정상 동작·콘솔에는 일부러 낸 위반만 있음을 확인함. 호출 제한은 시험(`test-rate-limit.mjs`)으로만 확인했고 **실제 로그인 상태에서 429가 나는 것은 확인 전**. **구글 로그인이 CSP 아래에서 동작하는지는 운영 빌드로 직접 확인 전**(구글 이동은 주소창 이동이라 CSP 영향이 없을 것으로 보지만 시험하지 못함)
 
 ### 5c. 배포·운영 메모
 - **푸시 = 자동 배포.** 코드 변경은 `git add -A && git commit && git push`로 반영(약 1분). **환경변수 변경은 재배포(Deployments > Redeploy)해야 반영**
@@ -192,6 +201,7 @@ first-service/
 | `test-exchange-rate` | 환율 문구, **실제 환율 1회 호출**, 장애·이상값 폴백 |
 | `test-idle` | 자동 로그아웃 상태 경계(9분 안내, 10분 만료), 시계 오차 |
 | `test-auth-cookie` | Supabase 로그인 쿠키 판별(분할 쿠키, code-verifier 제외) |
+| `test-rate-limit` | 호출 제한 한도·차단·재시도 시간·기록 정리 |
 | `test-ai-parse` | **실제 Claude 호출**(비용 발생, 1센트 이하). 규칙 파서가 처리하지 못하는 문자만 호출 |
 
 ---

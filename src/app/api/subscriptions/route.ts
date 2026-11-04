@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { jsonError, readJson, requireUser } from "@/lib/api";
+import { enforceRateLimit, jsonError, readJson, requireUser } from "@/lib/api";
 import { parseSubscriptionInput } from "@/lib/validation";
 
 // 내 구독 목록
 export async function GET() {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+  const limited = enforceRateLimit(auth.user.id, "read");
+  if (limited) return limited;
 
   const { data, error } = await auth.supabase
     .from("subscriptions")
@@ -21,6 +23,8 @@ export async function GET() {
 export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+  const limited = enforceRateLimit(auth.user.id, "write");
+  if (limited) return limited;
 
   const body = await readJson(request);
   const parsed = parseSubscriptionInput(body, false);

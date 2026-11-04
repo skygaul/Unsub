@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { jsonError, readJson, requireUser } from "@/lib/api";
+import { enforceRateLimit, jsonError, readJson, requireUser } from "@/lib/api";
 import {
   MAX_TEXT_LENGTH,
   ParseUnavailableError,
@@ -9,23 +9,6 @@ import {
 } from "@/lib/parse-payment";
 import { ruleParse } from "@/lib/rule-parser";
 import { todayKst } from "@/lib/types";
-
-// 사용자별 간단한 호출 제한(서버 인스턴스 메모리 기준). 비용 폭주를 막는 최소한의 장치.
-const WINDOW_MS = 60_000;
-const MAX_CALLS_PER_WINDOW = 8;
-const calls = new Map<string, number[]>();
-
-function rateLimited(userId: string) {
-  const now = Date.now();
-  const recent = (calls.get(userId) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= MAX_CALLS_PER_WINDOW) {
-    calls.set(userId, recent);
-    return true;
-  }
-  recent.push(now);
-  calls.set(userId, recent);
-  return false;
-}
 
 /**
  * 결제 문자 → 구독 정보 추출. 원문은 저장하지 않고 로그에도 남기지 않는다.
@@ -37,9 +20,13 @@ export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
 
-  if (rateLimited(auth.user.id)) {
-    return jsonError("잠시 후 다시 시도해 주세요. 1분에 몇 번까지만 분석할 수 있어요.", 429);
-  }
+  // 비용 폭주를 막는 사용자별 호출 제한(src/lib/rate-limit.ts의 LIMITS.parse)
+  const limited = enforceRateLimit(
+    auth.user.id,
+    "parse",
+    "잠시 후 다시 시도해 주세요. 1분에 몇 번까지만 분석할 수 있어요.",
+  );
+  if (limited) return limited;
 
   const body = await readJson(request);
   const raw =

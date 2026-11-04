@@ -1,0 +1,19 @@
+# 의존성 업데이트를 매주 월요일에 PR로 올려 준다. 보안 취약점 알림은 GitHub 저장소 설정(Code security)에서 따로 켠다.
+# PR은 main에 병합하기 전까지 운영 사이트에 반영되지 않는다(Vercel은 PR에 미리보기 배포만 만든다).
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      timezone: "Asia/Seoul"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # 마이너·패치 업데이트는 한 PR로 묶어서 PR이 쌓이지 않게 한다. 메이저 업데이트는 개별 PR로 온다.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"

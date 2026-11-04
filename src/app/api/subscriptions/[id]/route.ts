@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { jsonError, readJson, requireUser } from "@/lib/api";
+import { enforceRateLimit, jsonError, readJson, requireUser } from "@/lib/api";
 import { isUuid, parseSubscriptionInput } from "@/lib/validation";
 
 // 구독 수정 (보낸 필드만 바꾼다)
@@ -10,6 +10,8 @@ export async function PATCH(
 ) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+  const limited = enforceRateLimit(auth.user.id, "write");
+  if (limited) return limited;
 
   const { id } = await ctx.params;
   if (!isUuid(id)) return jsonError("잘못된 주소예요.", 400);
@@ -41,6 +43,8 @@ export async function DELETE(
 ) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+  const limited = enforceRateLimit(auth.user.id, "write");
+  if (limited) return limited;
 
   const { id } = await ctx.params;
   if (!isUuid(id)) return jsonError("잘못된 주소예요.", 400);
