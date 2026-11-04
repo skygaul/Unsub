@@ -203,10 +203,12 @@ first-service/
 ### 신뢰도 수준 (`verification`)
 | 값 | 의미 | 해당 서비스 |
 |---|---|---|
-| `page_read` | 공식 도움말 본문을 직접 열어 대조 | 넷플릭스, 유튜브 프리미엄, ChatGPT, Claude, 제미나이, 디즈니+(구 정책), **네이버플러스(2026-11-04, 아래 참고)** |
+| `page_read` | 공식 도움말 본문을 직접 열어 대조 | 넷플릭스, 유튜브 프리미엄, ChatGPT, Claude, 제미나이, 디즈니+(구 정책), **네이버플러스·노션(2026-11-04, 아래 참고)** |
 | `official_search` | 공식 도메인 검색 요약으로 확인, 본문 미열람 | 쿠팡 와우, 티빙, 웨이브 |
-| `partial` | 일부만 공식 확인 | 노션 (환불은 공식, 해지 경로는 블로그) |
+| `partial` | 일부만 공식 확인 | (현재 없음) |
 | `blog_only` | 블로그·기사 기준 | (현재 없음) |
+
+**노션 갱신 (2026-11-04)**: 사용자가 준 공식 도움말 주소(https://www.notion.com/help/upgrade-or-downgrade-your-plan)를 웹 읽기 도구로 직접 읽고, 기존 환불 정책 페이지 내용과 합쳐 `notion`을 다시 썼음(해지 경로 Settings > Billing > Change plan > Downgrade, 모바일 앱에서는 변경 불가, Apple 구독은 Apple에 문의, 환불 규칙, 워크스페이스 단위 청구·결제 실패 시 재시도 등). 신뢰도 `partial` → `page_read`. **아직 확인하지 못한 것**: 다운그레이드 후 기능 변화(`notion.com/help/plan-downgrade`), Google Play 구독의 구체적인 취소 단계(공식 페이지에 없음). 이 두 가지는 `notes`에 그대로 적어 둠. **`notes`와 `corrections`는 내부 메모용이며 가이드 화면의 "참고" 섹션을 없애서(2026-11-04) 사용자에게 보이지 않음**(DB에는 `notes`로 합쳐 저장됨). **사용자에게 꼭 알려야 하는 주의 문장은 `warnings`(주의사항)나 해당 항목(`cancel`, `after_cancel`, `refund`)에 넣을 것.** 이 기준으로 쿠팡 와우의 "무료체험 중에는 즉시 해지 불가"를 `warnings`로 옮겼음
 
 **네이버플러스 갱신 (2026-11-04)**: 에이전트는 `help.naver.com`에 접속할 수 없어(브라우저·웹 읽기 도구 모두 차단), **사용자가 공식 도움말(https://help.naver.com/service/23168/bookmark/20281?osType=COMMONOS) 본문을 복사해 제공한 내용**으로 `cancel-guides.json`의 `naver_plus`를 다시 썼음(정기결제 해지·즉시 종료 경로, 월간·연간 이용권별 환불 규칙, 청약철회 100%/90%, 결제수단별 환불 시점, 주의사항 6개). 블로그 기반 옛 내용은 제거. 이 항목은 서비스별 `last_verified: "2026-11-04"`를 가지며, **다른 서비스는 meta 날짜(2026-11-03)를 그대로 씀**(`scripts/generate-seed.mjs`가 서비스별 `last_verified`를 우선 사용). **DB 반영은 `supabase/seed.sql`을 Supabase SQL Editor에서 실행해야 함.**
 
